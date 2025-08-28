@@ -8,7 +8,11 @@ import { BookOpen, Heart, Sparkles, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import authBg from "@/assets/auth-bg.jpg";
 
-const Auth = () => {
+interface AuthProps {
+  onAuthSuccess: () => void;
+}
+
+const Auth = ({ onAuthSuccess }: AuthProps) => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -24,7 +28,8 @@ const Auth = () => {
         title: "Welcome to Journal+",
         description: "Your personal space for reflection and growth",
       });
-      // In a real app, you'd handle navigation here
+      // Navigate to dashboard after successful auth
+      onAuthSuccess();
     }, 1500);
   };
 

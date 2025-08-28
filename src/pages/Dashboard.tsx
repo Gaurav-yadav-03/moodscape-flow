@@ -6,7 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { CalendarDays, Plus, TrendingUp, Heart, BookOpen, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-const Dashboard = () => {
+interface DashboardProps {
+  onNavigate: (page: "dashboard" | "diary") => void;
+  onLogout: () => void;
+}
+
+const Dashboard = ({ onNavigate, onLogout }: DashboardProps) => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const { toast } = useToast();
 
@@ -27,7 +32,7 @@ const Dashboard = () => {
       title: "Ready to write?",
       description: "Let's capture today's thoughts and feelings",
     });
-    // Navigate to diary entry page
+    onNavigate("diary");
   };
 
   const getMoodEmoji = (mood: string) => {

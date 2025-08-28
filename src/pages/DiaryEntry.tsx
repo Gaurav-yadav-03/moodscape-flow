@@ -19,7 +19,12 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-const DiaryEntry = () => {
+interface DiaryEntryProps {
+  onNavigate: (page: "dashboard" | "diary") => void;
+  onLogout: () => void;
+}
+
+const DiaryEntry = ({ onNavigate, onLogout }: DiaryEntryProps) => {
   const [content, setContent] = useState("");
   const [selectedMood, setSelectedMood] = useState("neutral");
   const [selectedTheme, setSelectedTheme] = useState("default");
@@ -80,7 +85,7 @@ const DiaryEntry = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" onClick={() => onNavigate("dashboard")}>
                 <ArrowLeft className="w-5 h-5" />
               </Button>
               <div>
