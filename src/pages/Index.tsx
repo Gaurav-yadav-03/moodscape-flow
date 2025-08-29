@@ -1,41 +1,48 @@
 import { useState } from "react";
-import Auth from "./Auth";
-import Dashboard from "./Dashboard";
-import DiaryEntry from "./DiaryEntry";
+import { useAuth } from "@/hooks/useAuth";
+import { AuthForm } from "@/components/auth/AuthForm";
+import { Dashboard } from "@/components/dashboard/Dashboard";
+import { DiaryEditor } from "@/components/entry/DiaryEditor";
 
 const Index = () => {
-  const [currentPage, setCurrentPage] = useState<"auth" | "dashboard" | "diary">("auth");
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentPage, setCurrentPage] = useState<"dashboard" | "diary">("dashboard");
+  const [editingEntryId, setEditingEntryId] = useState<string | undefined>();
+  const { user, loading } = useAuth();
 
-  const handleAuthSuccess = () => {
-    setIsAuthenticated(true);
-    setCurrentPage("dashboard");
-  };
-
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    setCurrentPage("auth");
-  };
-
-  const navigateTo = (page: "dashboard" | "diary") => {
+  const navigateTo = (page: "dashboard" | "diary", entryId?: string) => {
     setCurrentPage(page);
+    if (page === "diary") {
+      setEditingEntryId(entryId);
+    }
   };
 
-  // Simple page routing for demo purposes
-  if (currentPage === "auth" && !isAuthenticated) {
-    return <Auth onAuthSuccess={handleAuthSuccess} />;
+  const handleBack = () => {
+    setCurrentPage("dashboard");
+    setEditingEntryId(undefined);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen gradient-bg flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 bg-gradient-warm rounded-2xl flex items-center justify-center animate-pulse-soft mx-auto">
+            <span className="text-white font-bold text-xl">J+</span>
+          </div>
+          <p className="text-muted-foreground">Loading Journal+...</p>
+        </div>
+      </div>
+    );
   }
 
-  if (currentPage === "dashboard") {
-    return <Dashboard onNavigate={navigateTo} onLogout={handleLogout} />;
+  if (!user) {
+    return <AuthForm />;
   }
 
   if (currentPage === "diary") {
-    return <DiaryEntry onNavigate={navigateTo} onLogout={handleLogout} />;
+    return <DiaryEditor entryId={editingEntryId} onBack={handleBack} />;
   }
 
-  // Default to dashboard if authenticated
-  return <Dashboard onNavigate={navigateTo} onLogout={handleLogout} />;
+  return <Dashboard onNavigate={navigateTo} />;
 };
 
 export default Index;
