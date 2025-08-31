@@ -8,9 +8,10 @@ import { cn } from '@/lib/utils';
 interface CalendarViewProps {
   entries: Entry[];
   loading: boolean;
+  onEntryClick?: (entryId: string) => void;
 }
 
-export function CalendarView({ entries, loading }: CalendarViewProps) {
+export function CalendarView({ entries, loading, onEntryClick }: CalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const getMoodEmoji = (mood: string) => {
@@ -131,10 +132,11 @@ export function CalendarView({ entries, loading }: CalendarViewProps) {
               <Button
                 key={date.toISOString()}
                 variant="ghost"
+                onClick={() => hasEntry && entry && onEntryClick?.(entry.id)}
                 className={cn(
                   "h-16 p-2 flex flex-col items-center justify-center relative transition-smooth",
                   today && "ring-2 ring-primary",
-                  hasEntry && "bg-gradient-to-br from-primary/10 to-accent/10",
+                  hasEntry && "bg-gradient-to-br from-primary/10 to-accent/10 cursor-pointer",
                   "hover:scale-105 hover:shadow-medium"
                 )}
               >

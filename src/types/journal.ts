@@ -49,6 +49,20 @@ export const MOOD_OPTIONS: MoodOption[] = [
   { value: 'sad', emoji: '😢', label: 'Sad', color: 'mood-sad' }
 ];
 
+// Helper function to get today's date in YYYY-MM-DD format
+export const getTodaysDate = (): string => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+// Helper function to check if an entry can be created for a specific date
+export const canCreateEntryForDate = (date: string): boolean => {
+  return date === getTodaysDate();
+};
+
 export const THEME_OPTIONS: ThemeOption[] = [
   { value: 'default', name: 'Default', background: 'bg-background', text: 'text-foreground' },
   { value: 'sunset', name: 'Sunset', background: 'bg-gradient-sunset', text: 'text-white' },

@@ -40,10 +40,29 @@ export function useEntries() {
 
   const createEntry = async (entryData: Omit<Entry, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
     try {
+      // Check if an entry already exists for today
+      const todaysDate = new Date().toISOString().split('T')[0];
+      const { data: existingEntry } = await supabase
+        .from('entries')
+        .select('id')
+        .eq('user_id', user?.id!)
+        .eq('date', todaysDate)
+        .maybeSingle();
+
+      if (existingEntry) {
+        toast({
+          title: "Entry already exists",
+          description: "You can only create one entry per day. Edit your existing entry instead.",
+          variant: "destructive",
+        });
+        return { data: null, error: 'Entry already exists for today' };
+      }
+
       const { data, error } = await supabase
         .from('entries')
         .insert([{
           ...entryData,
+          date: todaysDate, // Always use today's date
           user_id: user?.id!
         }])
         .select()
@@ -65,6 +84,24 @@ export function useEntries() {
         description: "Could not save your journal entry",
         variant: "destructive",
       });
+      return { data: null, error };
+    }
+  };
+
+  const getTodaysEntry = async () => {
+    try {
+      const todaysDate = new Date().toISOString().split('T')[0];
+      const { data, error } = await supabase
+        .from('entries')
+        .select('*')
+        .eq('user_id', user?.id!)
+        .eq('date', todaysDate)
+        .maybeSingle();
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error fetching today\'s entry:', error);
       return { data: null, error };
     }
   };
@@ -149,5 +186,6 @@ export function useEntries() {
     updateEntry,
     deleteEntry,
     searchEntries,
+    getTodaysEntry,
   };
 }

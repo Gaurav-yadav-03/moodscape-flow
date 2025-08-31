@@ -1,40 +1,26 @@
-import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Search, Calendar, Clock } from 'lucide-react';
 import { Entry, MOOD_OPTIONS } from '@/types/journal';
-import { useEntries } from '@/hooks/useEntries';
 
 interface EntriesListViewProps {
   entries: Entry[];
   loading: boolean;
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  onEntryClick?: (entryId: string) => void;
 }
 
 export function EntriesListView({ 
   entries, 
   loading, 
   searchQuery, 
-  onSearchChange 
+  onSearchChange,
+  onEntryClick 
 }: EntriesListViewProps) {
-  const [filteredEntries, setFilteredEntries] = useState<Entry[]>(entries);
-  const { searchEntries } = useEntries();
-
-  useEffect(() => {
-    const performSearch = async () => {
-      if (searchQuery.trim()) {
-        const { data } = await searchEntries(searchQuery);
-        setFilteredEntries(data);
-      } else {
-        setFilteredEntries(entries);
-      }
-    };
-
-    const debounceTimer = setTimeout(performSearch, 300);
-    return () => clearTimeout(debounceTimer);
-  }, [searchQuery, entries, searchEntries]);
+  // Use the passed entries directly (search is handled by parent)
+  const filteredEntries = entries;
 
   const getMoodData = (mood: string) => {
     return MOOD_OPTIONS.find(m => m.value === mood) || MOOD_OPTIONS[5];
@@ -120,7 +106,11 @@ export function EntriesListView({
             const moodData = getMoodData(entry.mood);
             
             return (
-              <Card key={entry.id} className="journal-card cursor-pointer group">
+              <Card 
+                key={entry.id} 
+                className="journal-card cursor-pointer group"
+                onClick={() => onEntryClick?.(entry.id)}
+              >
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">

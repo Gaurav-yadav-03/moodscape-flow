@@ -4,7 +4,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
 import { 
   Save, 
   ArrowLeft, 
@@ -13,7 +12,11 @@ import {
   Smile,
   Clock,
   Calendar,
-  Loader2 
+  Loader2,
+  Sparkles,
+  Brain,
+  Heart,
+  Wand2
 } from 'lucide-react';
 import { 
   Entry, 
@@ -22,9 +25,11 @@ import {
   FONT_OPTIONS,
   MoodOption,
   ThemeOption,
-  FontOption 
+  FontOption,
+  getTodaysDate
 } from '@/types/journal';
 import { useEntries } from '@/hooks/useEntries';
+import { useAI } from '@/hooks/useAI';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -40,13 +45,16 @@ export function DiaryEditor({ entryId, onBack }: DiaryEditorProps) {
     mood: 'neutral',
     theme: 'default',
     font_style: 'default',
-    date: new Date().toISOString().split('T')[0]
+    date: getTodaysDate()
   });
   const [saving, setSaving] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [aiSummary, setAiSummary] = useState<string>('');
+  const [aiReflection, setAiReflection] = useState<string>('');
   
   const { entries, createEntry, updateEntry } = useEntries();
+  const { summarizeEntry, detectMood, getReflection, loading: aiLoading } = useAI();
   const { toast } = useToast();
 
   // Load existing entry if editing
@@ -61,16 +69,14 @@ export function DiaryEditor({ entryId, onBack }: DiaryEditorProps) {
 
   // Auto-save functionality
   useEffect(() => {
-    if (!entry.content?.trim()) return;
+    if (!entry.content?.trim() || !entryId) return;
 
     const autoSaveTimer = setTimeout(async () => {
-      if (entryId) {
-        setAutoSaving(true);
-        await updateEntry(entryId, entry);
-        setAutoSaving(false);
-        setLastSaved(new Date());
-      }
-    }, 2000);
+      setAutoSaving(true);
+      await updateEntry(entryId, entry);
+      setAutoSaving(false);
+      setLastSaved(new Date());
+    }, 3000);
 
     return () => clearTimeout(autoSaveTimer);
   }, [entry.content, entry.title, entry.mood, entry.theme, entry.font_style, entryId, updateEntry]);
@@ -90,7 +96,10 @@ export function DiaryEditor({ entryId, onBack }: DiaryEditorProps) {
       if (entryId) {
         await updateEntry(entryId, entry);
       } else {
-        await createEntry(entry as Omit<Entry, 'id' | 'user_id' | 'created_at' | 'updated_at'>);
+        await createEntry({
+          ...entry,
+          date: getTodaysDate()
+        } as Omit<Entry, 'id' | 'user_id' | 'created_at' | 'updated_at'>);
       }
       setLastSaved(new Date());
       onBack();
@@ -101,10 +110,18 @@ export function DiaryEditor({ entryId, onBack }: DiaryEditorProps) {
     }
   };
 
+  const handleAIMoodDetection = async () => {
+    if (!entry.content?.trim()) return;
+    const detectedMood = await detectMood(entry.content);
+    if (detectedMood && MOOD_OPTIONS.find(m => m.value === detectedMood)) {
+      setEntry(prev => ({ ...prev, mood: detectedMood }));
+      toast({ title: "Mood detected!", description: `AI detected your mood as ${detectedMood}` });
+    }
+  };
+
   const selectedMood = MOOD_OPTIONS.find(m => m.value === entry.mood) || MOOD_OPTIONS[5];
   const selectedTheme = THEME_OPTIONS.find(t => t.value === entry.theme) || THEME_OPTIONS[0];
   const selectedFont = FONT_OPTIONS.find(f => f.value === entry.font_style) || FONT_OPTIONS[0];
-
   const wordCount = entry.content?.split(/\s+/).filter(word => word.length > 0).length || 0;
 
   return (
@@ -114,59 +131,29 @@ export function DiaryEditor({ entryId, onBack }: DiaryEditorProps) {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <Button variant="ghost" onClick={onBack} className="hover:bg-white/20">
+              <Button variant="ghost" onClick={onBack}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back
               </Button>
-              
               <div className="flex items-center space-x-2">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">
-                  {new Date(entry.date || new Date()).toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    month: 'long',
-                    day: 'numeric',
-                    year: 'numeric'
-                  })}
-                </span>
+                <span className="text-sm text-muted-foreground">Today's Entry</span>
               </div>
             </div>
-
             <div className="flex items-center space-x-4">
-              {/* Auto-save indicator */}
-              {autoSaving ? (
+              {autoSaving && (
                 <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                   <Loader2 className="h-3 w-3 animate-spin" />
                   <span>Saving...</span>
                 </div>
-              ) : lastSaved ? (
-                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                  <Clock className="h-3 w-3" />
-                  <span>
-                    Saved {lastSaved.toLocaleTimeString('en-US', { 
-                      hour: 'numeric', 
-                      minute: '2-digit' 
-                    })}
-                  </span>
-                </div>
-              ) : null}
-
+              )}
               <Button 
                 onClick={handleSave}
                 disabled={saving || !entry.content?.trim()}
                 className="bg-gradient-warm border-0 hover:opacity-90"
               >
-                {saving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Save Entry
-                  </>
-                )}
+                <Save className="h-4 w-4 mr-2" />
+                Save Entry
               </Button>
             </div>
           </div>
@@ -176,51 +163,41 @@ export function DiaryEditor({ entryId, onBack }: DiaryEditorProps) {
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Main Editor */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className="lg:col-span-3">
             <Card className="journal-card">
               <CardHeader>
-                <div className="space-y-4">
-                  <Input
-                    placeholder="Give your entry a title (optional)"
-                    value={entry.title || ''}
-                    onChange={(e) => setEntry(prev => ({ ...prev, title: e.target.value }))}
-                    className="text-lg font-medium border-none bg-transparent p-0 focus-visible:ring-0"
-                  />
-                  
-                  <div className="flex items-center space-x-4">
-                    <Badge className={`${selectedMood.color} text-white`}>
-                      <span className="mr-1">{selectedMood.emoji}</span>
-                      {selectedMood.label}
-                    </Badge>
-                    
-                    <span className="text-sm text-muted-foreground">
-                      {wordCount} {wordCount === 1 ? 'word' : 'words'}
-                    </span>
-                  </div>
+                <Input
+                  placeholder="Give your entry a title (optional)"
+                  value={entry.title || ''}
+                  onChange={(e) => setEntry(prev => ({ ...prev, title: e.target.value }))}
+                  className="text-lg font-medium border-none bg-transparent p-0 focus-visible:ring-0"
+                />
+                <div className="flex items-center justify-between">
+                  <Badge className={`${selectedMood.color} text-white`}>
+                    <span className="mr-1">{selectedMood.emoji}</span>
+                    {selectedMood.label}
+                  </Badge>
+                  <Button variant="outline" size="sm" onClick={handleAIMoodDetection} disabled={aiLoading}>
+                    <Brain className="h-3 w-3 mr-1" />
+                    AI Mood
+                  </Button>
                 </div>
               </CardHeader>
-              
               <CardContent>
                 <Textarea
-                  placeholder="What's on your mind today? Start writing your thoughts..."
+                  placeholder="What's on your mind today?"
                   value={entry.content || ''}
                   onChange={(e) => setEntry(prev => ({ ...prev, content: e.target.value }))}
                   className={cn(
                     "min-h-[400px] resize-none border-none bg-transparent p-0 text-base leading-relaxed focus-visible:ring-0",
-                    selectedFont.className,
-                    selectedTheme.text
+                    selectedFont.className
                   )}
-                  style={{
-                    background: selectedTheme.background.includes('gradient') 
-                      ? `var(--gradient-${selectedTheme.value})` 
-                      : undefined
-                  }}
                 />
               </CardContent>
             </Card>
           </div>
 
-          {/* Sidebar Controls */}
+          {/* Sidebar */}
           <div className="space-y-6">
             {/* Mood Selector */}
             <Card className="journal-card">
@@ -230,7 +207,7 @@ export function DiaryEditor({ entryId, onBack }: DiaryEditorProps) {
                   <span>Mood</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent>
                 <div className="grid grid-cols-2 gap-2">
                   {MOOD_OPTIONS.map((mood: MoodOption) => (
                     <Button
@@ -238,7 +215,7 @@ export function DiaryEditor({ entryId, onBack }: DiaryEditorProps) {
                       variant={entry.mood === mood.value ? "default" : "outline"}
                       className={cn(
                         "justify-start h-auto p-3",
-                        entry.mood === mood.value && `${mood.color} text-white hover:opacity-90`
+                        entry.mood === mood.value && `${mood.color} text-white`
                       )}
                       onClick={() => setEntry(prev => ({ ...prev, mood: mood.value }))}
                     >
@@ -250,90 +227,41 @@ export function DiaryEditor({ entryId, onBack }: DiaryEditorProps) {
               </CardContent>
             </Card>
 
-            {/* Theme Selector */}
+            {/* AI Features */}
             <Card className="journal-card">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
-                  <Palette className="h-5 w-5" />
-                  <span>Theme</span>
+                  <Sparkles className="h-5 w-5" />
+                  <span>AI Features</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {THEME_OPTIONS.map((theme: ThemeOption) => (
-                  <Button
-                    key={theme.value}
-                    variant={entry.theme === theme.value ? "default" : "outline"}
-                    className="w-full justify-start"
-                    onClick={() => setEntry(prev => ({ ...prev, theme: theme.value }))}
-                  >
-                    <div 
-                      className="w-4 h-4 rounded-full mr-3 border"
-                      style={{
-                        background: theme.background.includes('gradient') 
-                          ? `var(--gradient-${theme.value})`
-                          : theme.background
-                      }}
-                    />
-                    {theme.name}
-                  </Button>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* Font Selector */}
-            <Card className="journal-card">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Type className="h-5 w-5" />
-                  <span>Font Style</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {FONT_OPTIONS.map((font: FontOption) => (
-                  <Button
-                    key={font.value}
-                    variant={entry.font_style === font.value ? "default" : "outline"}
-                    className={cn("w-full justify-start", font.className)}
-                    onClick={() => setEntry(prev => ({ ...prev, font_style: font.value }))}
-                  >
-                    {font.name}
-                  </Button>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* Quick Emojis */}
-            <Card className="journal-card">
-              <CardHeader>
-                <CardTitle className="text-sm">Quick Emojis</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-4 gap-2">
-                  {['❤️', '🌟', '🌈', '🎉', '💭', '✨', '🌸', '🍃'].map((emoji) => (
-                    <Button
-                      key={emoji}
-                      variant="ghost"
-                      className="h-8 w-8 p-0 text-lg hover:scale-110 transition-transform"
-                      onClick={() => {
-                        const textarea = document.querySelector('textarea');
-                        if (textarea) {
-                          const start = textarea.selectionStart;
-                          const end = textarea.selectionEnd;
-                          const newContent = (entry.content || '').slice(0, start) + emoji + (entry.content || '').slice(end);
-                          setEntry(prev => ({ ...prev, content: newContent }));
-                          
-                          // Restore cursor position
-                          setTimeout(() => {
-                            textarea.focus();
-                            textarea.setSelectionRange(start + emoji.length, start + emoji.length);
-                          }, 0);
-                        }
-                      }}
-                    >
-                      {emoji}
-                    </Button>
-                  ))}
-                </div>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    const summary = await summarizeEntry(entry.content || '');
+                    if (summary) setAiSummary(summary);
+                  }}
+                  disabled={aiLoading || !entry.content?.trim()}
+                  className="w-full"
+                  size="sm"
+                >
+                  <Wand2 className="h-3 w-3 mr-2" />
+                  Summarize
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    const reflection = await getReflection(entry.content || '');
+                    if (reflection) setAiReflection(reflection);
+                  }}
+                  disabled={aiLoading || !entry.content?.trim()}
+                  className="w-full"
+                  size="sm"
+                >
+                  <Heart className="h-3 w-3 mr-2" />
+                  Reflect
+                </Button>
               </CardContent>
             </Card>
           </div>
