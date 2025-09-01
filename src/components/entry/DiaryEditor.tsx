@@ -31,6 +31,9 @@ import {
 import { useEntries } from '@/hooks/useEntries';
 import { useAI } from '@/hooks/useAI';
 import { useToast } from '@/hooks/use-toast';
+import { ThemeSelector } from '@/components/ui/theme-selector';
+import { StickyNotes } from './StickyNotes';
+import { EmojiPicker } from './EmojiPicker';
 import { cn } from '@/lib/utils';
 
 interface DiaryEditorProps {
@@ -52,6 +55,9 @@ export function DiaryEditor({ entryId, onBack }: DiaryEditorProps) {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [aiSummary, setAiSummary] = useState<string>('');
   const [aiReflection, setAiReflection] = useState<string>('');
+  const [customTheme, setCustomTheme] = useState<string>('default');
+  const [stickyNotes, setStickyNotes] = useState<any[]>([]);
+  const [textareaRef, setTextareaRef] = useState<HTMLTextAreaElement | null>(null);
   
   const { entries, createEntry, updateEntry } = useEntries();
   const { summarizeEntry, detectMood, getReflection, loading: aiLoading } = useAI();
@@ -124,8 +130,59 @@ export function DiaryEditor({ entryId, onBack }: DiaryEditorProps) {
   const selectedFont = FONT_OPTIONS.find(f => f.value === entry.font_style) || FONT_OPTIONS[0];
   const wordCount = entry.content?.split(/\s+/).filter(word => word.length > 0).length || 0;
 
+  const handleEmojiInsert = (emoji: string) => {
+    if (textareaRef) {
+      const start = textareaRef.selectionStart;
+      const end = textareaRef.selectionEnd;
+      const currentContent = entry.content || '';
+      const newContent = currentContent.slice(0, start) + emoji + currentContent.slice(end);
+      setEntry(prev => ({ ...prev, content: newContent }));
+      
+      // Restore cursor position after emoji
+      setTimeout(() => {
+        textareaRef.focus();
+        textareaRef.setSelectionRange(start + emoji.length, start + emoji.length);
+      }, 0);
+    }
+  };
+
+  const handleThemeChange = (theme: string, customBackground?: string) => {
+    setCustomTheme(theme);
+    setEntry(prev => ({ 
+      ...prev, 
+      theme: theme, 
+      customBackground 
+    }));
+  };
+
+  const getBackgroundStyle = () => {
+    if (customTheme === 'custom' && entry.customBackground) {
+      return {
+        backgroundImage: `url(${entry.customBackground})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed'
+      };
+    }
+    
+    const themeStyles = {
+      default: 'gradient-bg',
+      pastel: 'bg-gradient-to-br from-pink-100 via-purple-50 to-indigo-100 dark:from-pink-900/20 dark:via-purple-900/20 dark:to-indigo-900/20',
+      forest: 'bg-gradient-to-br from-green-100 via-emerald-50 to-teal-100 dark:from-green-900/20 dark:via-emerald-900/20 dark:to-teal-900/20',
+      sunset: 'bg-gradient-to-br from-orange-100 via-red-50 to-pink-100 dark:from-orange-900/20 dark:via-red-900/20 dark:to-pink-900/20',
+      minimal: 'bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-900 dark:to-black'
+    };
+    
+    return { className: themeStyles[customTheme as keyof typeof themeStyles] || themeStyles.default };
+  };
+
+  const backgroundStyle = getBackgroundStyle();
+
   return (
-    <div className="min-h-screen gradient-bg">
+    <div 
+      className={`min-h-screen ${backgroundStyle.className || ''}`}
+      style={backgroundStyle.backgroundImage ? backgroundStyle : undefined}
+    >
       {/* Header */}
       <header className="border-b bg-white/80 backdrop-blur-md sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
@@ -177,10 +234,13 @@ export function DiaryEditor({ entryId, onBack }: DiaryEditorProps) {
                     <span className="mr-1">{selectedMood.emoji}</span>
                     {selectedMood.label}
                   </Badge>
-                  <Button variant="outline" size="sm" onClick={handleAIMoodDetection} disabled={aiLoading}>
-                    <Brain className="h-3 w-3 mr-1" />
-                    AI Mood
-                  </Button>
+                  <div className="flex space-x-2">
+                    <Button variant="outline" size="sm" onClick={handleAIMoodDetection} disabled={aiLoading}>
+                      <Brain className="h-3 w-3 mr-1" />
+                      AI Mood
+                    </Button>
+                    <EmojiPicker onEmojiSelect={handleEmojiInsert} />
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -188,6 +248,7 @@ export function DiaryEditor({ entryId, onBack }: DiaryEditorProps) {
                   placeholder="What's on your mind today?"
                   value={entry.content || ''}
                   onChange={(e) => setEntry(prev => ({ ...prev, content: e.target.value }))}
+                  ref={(ref) => setTextareaRef(ref)}
                   className={cn(
                     "min-h-[400px] resize-none border-none bg-transparent p-0 text-base leading-relaxed focus-visible:ring-0",
                     selectedFont.className
@@ -262,8 +323,34 @@ export function DiaryEditor({ entryId, onBack }: DiaryEditorProps) {
                   <Heart className="h-3 w-3 mr-2" />
                   Reflect
                 </Button>
+                
+                {/* Display AI Results */}
+                {aiSummary && (
+                  <div className="p-3 bg-primary/5 rounded-lg border">
+                    <h4 className="font-medium text-sm mb-2">AI Summary:</h4>
+                    <p className="text-sm text-muted-foreground">{aiSummary}</p>
+                  </div>
+                )}
+                {aiReflection && (
+                  <div className="p-3 bg-secondary/5 rounded-lg border">
+                    <h4 className="font-medium text-sm mb-2">AI Reflection:</h4>
+                    <p className="text-sm text-muted-foreground">{aiReflection}</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
+
+            {/* Theme Selector */}
+            <ThemeSelector 
+              currentTheme={customTheme}
+              onThemeChange={handleThemeChange}
+            />
+
+            {/* Sticky Notes */}
+            <StickyNotes 
+              notes={stickyNotes}
+              onNotesChange={setStickyNotes}
+            />
           </div>
         </div>
       </div>

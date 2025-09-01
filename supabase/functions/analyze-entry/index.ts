@@ -3,6 +3,10 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
+if (!openAIApiKey) {
+  console.error('OPENAI_API_KEY is not set');
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -22,6 +26,17 @@ serve(async (req) => {
         JSON.stringify({ error: 'Content and action are required' }), 
         { 
           status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    if (!openAIApiKey) {
+      console.error('OpenAI API key not configured');
+      return new Response(
+        JSON.stringify({ error: 'AI service not configured. Please check your API key.' }), 
+        { 
+          status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
@@ -71,9 +86,18 @@ serve(async (req) => {
     });
 
     if (!response.ok) {
-      console.error('OpenAI API error:', response.status, await response.text());
+      const errorText = await response.text();
+      console.error('OpenAI API error:', response.status, errorText);
+      
+      let errorMessage = 'AI service temporarily unavailable';
+      if (response.status === 429) {
+        errorMessage = 'AI service is currently at capacity. Please try again in a moment.';
+      } else if (response.status === 401) {
+        errorMessage = 'AI service authentication failed. Please check configuration.';
+      }
+      
       return new Response(
-        JSON.stringify({ error: 'AI service unavailable' }), 
+        JSON.stringify({ error: errorMessage }), 
         { 
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

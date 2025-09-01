@@ -1,27 +1,27 @@
 import { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { 
-  CalendarDays, 
+  Calendar, 
   List, 
   Search, 
   Plus, 
   LogOut, 
-  TrendingUp, 
   Flame,
-  Target,
   BookOpen,
-  Loader2
+  Loader2,
+  Smile,
+  Trophy
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useEntries } from '@/hooks/useEntries';
-import { useStreaks } from '@/hooks/useStreaks';
 import { CalendarView } from './CalendarView';
 import { EntriesListView } from './EntriesListView';
+import { MoodCalendar } from './MoodCalendar';
+import { BadgeDisplay } from './BadgeDisplay';
+import { useEntries } from '@/hooks/useEntries';
+import { useStreaks } from '@/hooks/useStreaks';
 import { MOOD_OPTIONS, getTodaysDate } from '@/types/journal';
 
 interface DashboardProps {
@@ -32,7 +32,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [activeTab, setActiveTab] = useState('calendar');
+  const [view, setView] = useState<'calendar' | 'list' | 'mood' | 'badges'>('calendar');
   
   const { user, signOut } = useAuth();
   const { entries, loading, searchEntries, getTodaysEntry } = useEntries();
@@ -56,15 +56,23 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   };
 
   const handleNewEntry = async () => {
-    // Check if today's entry already exists
     const { data: todaysEntry } = await getTodaysEntry();
     if (todaysEntry) {
-      // Edit existing entry
       onNavigate('diary', todaysEntry.id);
     } else {
-      // Create new entry
       onNavigate('diary');
     }
+  };
+
+  const handleDateSelect = (date: string) => {
+    const entry = entries.find(e => e.date === date);
+    if (entry) {
+      onNavigate('diary', entry.id);
+    }
+  };
+
+  const handleEntrySelect = (entryId: string) => {
+    onNavigate('diary', entryId);
   };
 
   const todaysEntry = entries.find(e => e.date === getTodaysDate());
@@ -90,21 +98,6 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             </div>
 
             <div className="flex items-center space-x-4">
-              {/* Search Bar - Hidden on mobile */}
-              <div className="hidden md:block relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search your entries..."
-                  value={searchQuery}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className="pl-10 w-64 bg-white/50 border-white/20"
-                />
-                {isSearching && (
-                  <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
-                )}
-              </div>
-
-              {/* Streak Badge */}
               <Badge className="bg-gradient-warm text-white border-0 px-3 py-1 shadow-soft hidden sm:flex">
                 <Flame className="h-3 w-3 mr-1" />
                 {currentStreak} day streak
@@ -181,43 +174,67 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           </Card>
         </div>
 
-        {/* Main Content Tabs */}
-        <div className="space-y-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="flex justify-between items-center mb-6">
-              <TabsList className="grid w-auto grid-cols-2 bg-white/50 backdrop-blur-sm">
-                <TabsTrigger value="calendar" className="flex items-center space-x-2 data-[state=active]:bg-white">
-                  <CalendarDays className="h-4 w-4" />
-                  <span className="hidden sm:inline">Calendar View</span>
-                  <span className="sm:hidden">Calendar</span>
-                </TabsTrigger>
-                <TabsTrigger value="list" className="flex items-center space-x-2 data-[state=active]:bg-white">
-                  <List className="h-4 w-4" />
-                  <span className="hidden sm:inline">Entries List</span>
-                  <span className="sm:hidden">List</span>
-                </TabsTrigger>
-              </TabsList>
-            </div>
-
-            <TabsContent value="calendar" className="space-y-4">
-              <CalendarView 
-                entries={entries} 
-                loading={loading}
-                onEntryClick={(entryId) => onNavigate('diary', entryId)}
-              />
-            </TabsContent>
-
-            <TabsContent value="list" className="space-y-4">
-              <EntriesListView 
-                entries={searchQuery ? searchResults : entries} 
-                loading={loading || isSearching} 
-                searchQuery={searchQuery}
-                onSearchChange={handleSearch}
-                onEntryClick={(entryId) => onNavigate('diary', entryId)}
-              />
-            </TabsContent>
-          </Tabs>
+        {/* View Toggle */}
+        <div className="mb-6">
+          <div className="flex space-x-1 bg-white/50 backdrop-blur-sm rounded-lg p-1">
+            <Button
+              variant={view === 'calendar' ? 'default' : 'outline'}
+              onClick={() => setView('calendar')}
+              className="flex-1 text-xs px-2"
+            >
+              <Calendar className="h-4 w-4 mr-1" />
+              Calendar
+            </Button>
+            <Button
+              variant={view === 'list' ? 'default' : 'outline'}
+              onClick={() => setView('list')}
+              className="flex-1 text-xs px-2"
+            >
+              <List className="h-4 w-4 mr-1" />
+              Entries
+            </Button>
+            <Button
+              variant={view === 'mood' ? 'default' : 'outline'}
+              onClick={() => setView('mood')}
+              className="flex-1 text-xs px-2"
+            >
+              <Smile className="h-4 w-4 mr-1" />
+              Mood
+            </Button>
+            <Button
+              variant={view === 'badges' ? 'default' : 'outline'}
+              onClick={() => setView('badges')}
+              className="flex-1 text-xs px-2"
+            >
+              <Trophy className="h-4 w-4 mr-1" />
+              Badges
+            </Button>
+          </div>
         </div>
+
+        {/* Views */}
+        {view === 'calendar' && (
+          <CalendarView 
+            entries={entries} 
+            loading={loading}
+            onEntryClick={handleEntrySelect}
+          />
+        )}
+        {view === 'list' && (
+          <EntriesListView 
+            entries={searchQuery ? searchResults : entries}
+            loading={loading || isSearching}
+            searchQuery={searchQuery}
+            onSearchChange={handleSearch}
+            onEntryClick={handleEntrySelect}
+          />
+        )}
+        {view === 'mood' && (
+          <MoodCalendar entries={entries} onDateSelect={handleDateSelect} />
+        )}
+        {view === 'badges' && (
+          <BadgeDisplay entries={entries} />
+        )}
       </main>
     </div>
   );

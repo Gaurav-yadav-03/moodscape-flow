@@ -26,9 +26,10 @@ export function useAI() {
 
       if (error) {
         console.error('AI analysis error:', error);
+        const errorMessage = error.message || "Unable to analyze your entry. Please try again.";
         toast({
           title: "AI analysis failed",
-          description: "Unable to analyze your entry. Please try again.",
+          description: errorMessage,
           variant: "destructive",
         });
         return null;

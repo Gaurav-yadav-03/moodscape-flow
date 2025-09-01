@@ -16,6 +16,8 @@ export interface Entry {
   mood: string;
   theme: string;
   font_style: string;
+  customBackground?: string;
+  stickyNotes?: any[];
   created_at: string;
   updated_at: string;
 }
