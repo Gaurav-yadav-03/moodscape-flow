@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,13 +10,13 @@ import {
   Palette, 
   Type, 
   Smile,
-  Clock,
   Calendar,
-  Loader2,
   Sparkles,
   Brain,
   Heart,
-  Wand2
+  Wand2,
+  Trash2,
+  Edit3
 } from 'lucide-react';
 import { 
   Entry, 
@@ -29,63 +29,103 @@ import {
   getTodaysDate
 } from '@/types/journal';
 import { useEntries } from '@/hooks/useEntries';
+import { useUserSettings } from '@/hooks/useUserSettings';
 import { useAI } from '@/hooks/useAI';
 import { useToast } from '@/hooks/use-toast';
 import { ThemeSelector } from '@/components/ui/theme-selector';
 import { StickyNotes } from './StickyNotes';
 import { EmojiPicker } from './EmojiPicker';
+import { DateSelector } from './DateSelector';
+import { AutosaveIndicator } from './AutosaveIndicator';
 import { cn } from '@/lib/utils';
 
 interface DiaryEditorProps {
   entryId?: string;
+  selectedDate?: string;
   onBack: () => void;
 }
 
-export function DiaryEditor({ entryId, onBack }: DiaryEditorProps) {
+export function DiaryEditor({ entryId, selectedDate, onBack }: DiaryEditorProps) {
   const [entry, setEntry] = useState<Partial<Entry>>({
     title: '',
     content: '',
     mood: 'neutral',
     theme: 'default',
     font_style: 'default',
-    date: getTodaysDate()
+    entry_theme: 'default',
+    entry_font: 'default',
+    date: selectedDate || getTodaysDate()
   });
   const [saving, setSaving] = useState(false);
-  const [autoSaving, setAutoSaving] = useState(false);
+  const [autosaveStatus, setAutosaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [aiSummary, setAiSummary] = useState<string>('');
   const [aiReflection, setAiReflection] = useState<string>('');
   const [customTheme, setCustomTheme] = useState<string>('default');
   const [stickyNotes, setStickyNotes] = useState<any[]>([]);
   const [textareaRef, setTextareaRef] = useState<HTMLTextAreaElement | null>(null);
+  const [currentDate, setCurrentDate] = useState(selectedDate || getTodaysDate());
   
-  const { entries, createEntry, updateEntry } = useEntries();
+  const { entries, createEntry, updateEntry, deleteEntry, getEntryByDate } = useEntries();
+  const { settings } = useUserSettings();
   const { summarizeEntry, detectMood, getReflection, loading: aiLoading } = useAI();
   const { toast } = useToast();
 
-  // Load existing entry if editing
+  // Load existing entry if editing or by date
   useEffect(() => {
-    if (entryId) {
-      const existingEntry = entries.find(e => e.id === entryId);
-      if (existingEntry) {
-        setEntry(existingEntry);
+    const loadEntry = async () => {
+      if (entryId) {
+        const existingEntry = entries.find(e => e.id === entryId);
+        if (existingEntry) {
+          setEntry(existingEntry);
+          setCurrentDate(existingEntry.date);
+          setCustomTheme(existingEntry.entry_theme || existingEntry.theme || 'default');
+        }
+      } else if (currentDate) {
+        const { data: dateEntry } = await getEntryByDate(currentDate);
+        if (dateEntry) {
+          setEntry(dateEntry);
+          setCustomTheme(dateEntry.entry_theme || dateEntry.theme || 'default');
+        } else {
+          // Apply user's default theme for new entries
+          setEntry(prev => ({
+            ...prev,
+            theme: settings?.default_theme || 'default',
+            font_style: settings?.default_font || 'default',
+            entry_theme: settings?.default_theme || 'default',
+            entry_font: settings?.default_font || 'default',
+            date: currentDate
+          }));
+          setCustomTheme(settings?.default_theme || 'default');
+        }
       }
-    }
-  }, [entryId, entries]);
+    };
+    
+    loadEntry();
+  }, [entryId, currentDate, entries, getEntryByDate, settings]);
 
   // Auto-save functionality
+  const autoSave = useCallback(async () => {
+    if (!entry.content?.trim() || !entryId) return;
+
+    setAutosaveStatus('saving');
+    try {
+      await updateEntry(entryId, entry);
+      setAutosaveStatus('saved');
+      setLastSaved(new Date());
+      setTimeout(() => setAutosaveStatus('idle'), 2000);
+    } catch (error) {
+      setAutosaveStatus('error');
+      setTimeout(() => setAutosaveStatus('idle'), 3000);
+    }
+  }, [entry, entryId, updateEntry]);
+
   useEffect(() => {
     if (!entry.content?.trim() || !entryId) return;
 
-    const autoSaveTimer = setTimeout(async () => {
-      setAutoSaving(true);
-      await updateEntry(entryId, entry);
-      setAutoSaving(false);
-      setLastSaved(new Date());
-    }, 3000);
-
-    return () => clearTimeout(autoSaveTimer);
-  }, [entry.content, entry.title, entry.mood, entry.theme, entry.font_style, entryId, updateEntry]);
+    const timer = setTimeout(autoSave, 2000);
+    return () => clearTimeout(timer);
+  }, [entry.content, entry.title, entry.mood, autoSave]);
 
   const handleSave = async () => {
     if (!entry.content?.trim()) {
@@ -101,19 +141,58 @@ export function DiaryEditor({ entryId, onBack }: DiaryEditorProps) {
     try {
       if (entryId) {
         await updateEntry(entryId, entry);
+        toast({ title: "Entry updated!", description: "Your changes have been saved" });
       } else {
-        await createEntry({
+        const result = await createEntry({
           ...entry,
-          date: getTodaysDate()
-        } as Omit<Entry, 'id' | 'user_id' | 'created_at' | 'updated_at'>);
+          date: currentDate
+        } as Omit<Entry, 'id' | 'user_id' | 'created_at' | 'updated_at'>, currentDate);
+        
+        if (result.error && result.existingId) {
+          // Entry exists, navigate to edit it
+          window.history.replaceState(null, '', `?entry=${result.existingId}`);
+          const existingEntry = entries.find(e => e.id === result.existingId);
+          if (existingEntry) setEntry(existingEntry);
+          return;
+        }
+        
+        if (result.data) {
+          toast({ title: "Entry created!", description: "Your journal entry has been saved" });
+        }
       }
       setLastSaved(new Date());
       onBack();
     } catch (error) {
       console.error('Failed to save entry:', error);
+      toast({
+        title: "Save failed",
+        description: "Could not save your entry",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleDelete = async () => {
+    if (!entryId) return;
+    
+    try {
+      await deleteEntry(entryId);
+      toast({ title: "Entry deleted", description: "Your journal entry has been deleted" });
+      onBack();
+    } catch (error) {
+      toast({
+        title: "Delete failed",
+        description: "Could not delete the entry",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDateChange = (date: string) => {
+    setCurrentDate(date);
+    setEntry(prev => ({ ...prev, date }));
   };
 
   const handleAIMoodDetection = async () => {
@@ -150,8 +229,17 @@ export function DiaryEditor({ entryId, onBack }: DiaryEditorProps) {
     setCustomTheme(theme);
     setEntry(prev => ({ 
       ...prev, 
+      entry_theme: theme,
       theme: theme, 
       customBackground 
+    }));
+  };
+
+  const handleFontChange = (font: string) => {
+    setEntry(prev => ({ 
+      ...prev, 
+      entry_font: font,
+      font_style: font
     }));
   };
 
@@ -192,25 +280,32 @@ export function DiaryEditor({ entryId, onBack }: DiaryEditorProps) {
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back
               </Button>
-              <div className="flex items-center space-x-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Today's Entry</span>
-              </div>
+              <DateSelector 
+                selectedDate={currentDate}
+                onDateChange={handleDateChange}
+              />
             </div>
             <div className="flex items-center space-x-4">
-              {autoSaving && (
-                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  <span>Saving...</span>
-                </div>
+              <AutosaveIndicator status={autosaveStatus} lastSaved={lastSaved} />
+              
+              {entryId && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDelete}
+                  className="hover:bg-destructive hover:text-destructive-foreground"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               )}
+              
               <Button 
                 onClick={handleSave}
                 disabled={saving || !entry.content?.trim()}
                 className="bg-gradient-warm border-0 hover:opacity-90"
               >
                 <Save className="h-4 w-4 mr-2" />
-                Save Entry
+                {entryId ? 'Update' : 'Save'} Entry
               </Button>
             </div>
           </div>
@@ -251,7 +346,7 @@ export function DiaryEditor({ entryId, onBack }: DiaryEditorProps) {
                   ref={(ref) => setTextareaRef(ref)}
                   className={cn(
                     "min-h-[400px] resize-none border-none bg-transparent p-0 text-base leading-relaxed focus-visible:ring-0",
-                    selectedFont.className
+                    FONT_OPTIONS.find(f => f.value === entry.entry_font)?.className || selectedFont.className
                   )}
                 />
               </CardContent>

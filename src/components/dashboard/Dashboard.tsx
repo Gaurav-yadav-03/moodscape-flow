@@ -19,6 +19,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { CalendarView } from './CalendarView';
 import { EntriesListView } from './EntriesListView';
 import { MoodCalendar } from './MoodCalendar';
+import { MoodTrends } from './MoodTrends';
 import { BadgeDisplay } from './BadgeDisplay';
 import { useEntries } from '@/hooks/useEntries';
 import { useStreaks } from '@/hooks/useStreaks';
@@ -230,7 +231,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           />
         )}
         {view === 'mood' && (
-          <MoodCalendar entries={entries} onDateSelect={handleDateSelect} />
+          <MoodTrends entries={entries} />
         )}
         {view === 'badges' && (
           <BadgeDisplay entries={entries} />

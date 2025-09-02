@@ -49,6 +49,26 @@ export function useAI() {
     }
   };
 
+  const getTrendAnalysis = async (entries: any[]) => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-entry', {
+        body: { content: '', action: 'trend-analysis', entries }
+      });
+
+      if (error) {
+        console.error('AI trend analysis error:', error);
+        return null;
+      }
+      return data?.result;
+    } catch (error) {
+      console.error('Error calling trend analysis:', error);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const summarizeEntry = (content: string) => analyzeEntry(content, 'summarize');
   const detectMood = (content: string) => analyzeEntry(content, 'detect-mood');
   const getReflection = (content: string) => analyzeEntry(content, 'reflect');
@@ -58,5 +78,6 @@ export function useAI() {
     summarizeEntry,
     detectMood,
     getReflection,
+    getTrendAnalysis,
   };
 }

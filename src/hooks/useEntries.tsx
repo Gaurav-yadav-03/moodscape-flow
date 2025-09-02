@@ -38,31 +38,27 @@ export function useEntries() {
     }
   };
 
-  const createEntry = async (entryData: Omit<Entry, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+  const createEntry = async (entryData: Omit<Entry, 'id' | 'user_id' | 'created_at' | 'updated_at'>, date?: string) => {
     try {
-      // Check if an entry already exists for today
-      const todaysDate = new Date().toISOString().split('T')[0];
+      const targetDate = date || new Date().toISOString().split('T')[0];
+      
+      // Check if an entry already exists for the target date
       const { data: existingEntry } = await supabase
         .from('entries')
         .select('id')
         .eq('user_id', user?.id!)
-        .eq('date', todaysDate)
+        .eq('date', targetDate)
         .maybeSingle();
 
       if (existingEntry) {
-        toast({
-          title: "Entry already exists",
-          description: "You can only create one entry per day. Edit your existing entry instead.",
-          variant: "destructive",
-        });
-        return { data: null, error: 'Entry already exists for today' };
+        return { data: null, error: 'Entry already exists for this date', existingId: existingEntry.id };
       }
 
       const { data, error } = await supabase
         .from('entries')
         .insert([{
           ...entryData,
-          date: todaysDate, // Always use today's date
+          date: targetDate,
           user_id: user?.id!
         }])
         .select()
@@ -71,39 +67,33 @@ export function useEntries() {
       if (error) throw error;
       
       setEntries(prev => [data, ...prev]);
-      toast({
-        title: "Entry saved!",
-        description: "Your journal entry has been saved successfully",
-      });
-      
       return { data, error: null };
     } catch (error) {
       console.error('Error creating entry:', error);
-      toast({
-        title: "Failed to save",
-        description: "Could not save your journal entry",
-        variant: "destructive",
-      });
       return { data: null, error };
     }
   };
 
-  const getTodaysEntry = async () => {
+  const getEntryByDate = async (date: string) => {
     try {
-      const todaysDate = new Date().toISOString().split('T')[0];
       const { data, error } = await supabase
         .from('entries')
         .select('*')
         .eq('user_id', user?.id!)
-        .eq('date', todaysDate)
+        .eq('date', date)
         .maybeSingle();
 
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error fetching today\'s entry:', error);
+      console.error('Error fetching entry for date:', error);
       return { data: null, error };
     }
+  };
+
+  const getTodaysEntry = async () => {
+    const todaysDate = new Date().toISOString().split('T')[0];
+    return getEntryByDate(todaysDate);
   };
 
   const updateEntry = async (id: string, entryData: Partial<Entry>) => {
@@ -118,10 +108,6 @@ export function useEntries() {
       if (error) throw error;
       
       setEntries(prev => prev.map(entry => entry.id === id ? data : entry));
-      toast({
-        title: "Entry updated!",
-        description: "Your changes have been saved",
-      });
       
       return { data, error: null };
     } catch (error) {
@@ -137,27 +123,18 @@ export function useEntries() {
 
   const deleteEntry = async (id: string) => {
     try {
+      // Soft delete by setting deleted_at timestamp
       const { error } = await supabase
         .from('entries')
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .eq('id', id);
 
       if (error) throw error;
       
       setEntries(prev => prev.filter(entry => entry.id !== id));
-      toast({
-        title: "Entry deleted",
-        description: "Your journal entry has been deleted",
-      });
-      
       return { error: null };
     } catch (error) {
       console.error('Error deleting entry:', error);
-      toast({
-        title: "Failed to delete",
-        description: "Could not delete the entry",
-        variant: "destructive",
-      });
       return { error };
     }
   };
@@ -183,9 +160,10 @@ export function useEntries() {
     loading,
     fetchEntries,
     createEntry,
-    updateEntry,
-    deleteEntry,
-    searchEntries,
-    getTodaysEntry,
+      updateEntry,
+      deleteEntry,
+      searchEntries,
+      getTodaysEntry,
+      getEntryByDate,
   };
 }

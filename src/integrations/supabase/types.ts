@@ -19,6 +19,9 @@ export type Database = {
           content: string
           created_at: string
           date: string
+          deleted_at: string | null
+          entry_font: string | null
+          entry_theme: string | null
           font_style: string | null
           id: string
           mood: string
@@ -31,6 +34,9 @@ export type Database = {
           content: string
           created_at?: string
           date?: string
+          deleted_at?: string | null
+          entry_font?: string | null
+          entry_theme?: string | null
           font_style?: string | null
           id?: string
           mood?: string
@@ -43,6 +49,9 @@ export type Database = {
           content?: string
           created_at?: string
           date?: string
+          deleted_at?: string | null
+          entry_font?: string | null
+          entry_theme?: string | null
           font_style?: string | null
           id?: string
           mood?: string
@@ -75,6 +84,36 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          created_at: string
+          default_font: string | null
+          default_theme: string | null
+          id: string
+          notification_preferences: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          default_font?: string | null
+          default_theme?: string | null
+          id?: string
+          notification_preferences?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          default_font?: string | null
+          default_theme?: string | null
+          id?: string
+          notification_preferences?: Json | null
           updated_at?: string
           user_id?: string
         }
