@@ -25,7 +25,7 @@ export function AutosaveIndicator({ status, lastSaved }: AutosaveIndicatorProps)
       case 'saving':
         return 'Saving...';
       case 'saved':
-        return lastSaved ? `Saved ${lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Saved';
+        return lastSaved ? `All changes saved ✓` : 'Saved';
       case 'error':
         return 'Save failed';
       default:
@@ -36,11 +36,11 @@ export function AutosaveIndicator({ status, lastSaved }: AutosaveIndicatorProps)
   const getColorClass = () => {
     switch (status) {
       case 'saving':
-        return 'text-blue-600';
+        return 'text-primary';
       case 'saved':
-        return 'text-green-600';
+        return 'text-green-600 dark:text-green-400';
       case 'error':
-        return 'text-red-600';
+        return 'text-destructive';
       default:
         return 'text-muted-foreground';
     }
@@ -49,7 +49,7 @@ export function AutosaveIndicator({ status, lastSaved }: AutosaveIndicatorProps)
   if (status === 'idle') return null;
 
   return (
-    <div className={`flex items-center space-x-2 text-xs ${getColorClass()}`}>
+    <div className={`flex items-center space-x-1 text-xs font-medium px-2 py-1 rounded-full bg-muted/50 backdrop-blur-sm ${getColorClass()}`}>
       {getIcon()}
       <span>{getText()}</span>
     </div>

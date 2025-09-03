@@ -16,7 +16,8 @@ import {
   Heart,
   Wand2,
   Trash2,
-  Edit3
+  Edit3,
+  AlertTriangle
 } from 'lucide-react';
 import { 
   Entry, 
@@ -37,6 +38,7 @@ import { StickyNotes } from './StickyNotes';
 import { EmojiPicker } from './EmojiPicker';
 import { DateSelector } from './DateSelector';
 import { AutosaveIndicator } from './AutosaveIndicator';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 
 interface DiaryEditorProps {
@@ -65,6 +67,7 @@ export function DiaryEditor({ entryId, selectedDate, onBack }: DiaryEditorProps)
   const [stickyNotes, setStickyNotes] = useState<any[]>([]);
   const [textareaRef, setTextareaRef] = useState<HTMLTextAreaElement | null>(null);
   const [currentDate, setCurrentDate] = useState(selectedDate || getTodaysDate());
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   const { entries, createEntry, updateEntry, deleteEntry, getEntryByDate } = useEntries();
   const { settings } = useUserSettings();
@@ -80,12 +83,26 @@ export function DiaryEditor({ entryId, selectedDate, onBack }: DiaryEditorProps)
           setEntry(existingEntry);
           setCurrentDate(existingEntry.date);
           setCustomTheme(existingEntry.entry_theme || existingEntry.theme || 'default');
+          // Load sticky notes
+          try {
+            const notes = existingEntry.stickyNotes ? JSON.parse(existingEntry.stickyNotes) : [];
+            setStickyNotes(Array.isArray(notes) ? notes : []);
+          } catch {
+            setStickyNotes([]);
+          }
         }
       } else if (currentDate) {
         const { data: dateEntry } = await getEntryByDate(currentDate);
         if (dateEntry) {
           setEntry(dateEntry);
           setCustomTheme(dateEntry.entry_theme || dateEntry.theme || 'default');
+          // Load sticky notes
+          try {
+            const notes = dateEntry.stickyNotes ? JSON.parse(dateEntry.stickyNotes) : [];
+            setStickyNotes(Array.isArray(notes) ? notes : []);
+          } catch {
+            setStickyNotes([]);
+          }
         } else {
           // Apply user's default theme for new entries
           setEntry(prev => ({
@@ -97,6 +114,7 @@ export function DiaryEditor({ entryId, selectedDate, onBack }: DiaryEditorProps)
             date: currentDate
           }));
           setCustomTheme(settings?.default_theme || 'default');
+          setStickyNotes([]);
         }
       }
     };
@@ -139,14 +157,18 @@ export function DiaryEditor({ entryId, selectedDate, onBack }: DiaryEditorProps)
 
     setSaving(true);
     try {
+      const entryData = {
+        ...entry,
+        date: currentDate,
+        stickyNotes: JSON.stringify(stickyNotes)
+      };
+
       if (entryId) {
-        await updateEntry(entryId, entry);
-        toast({ title: "Entry updated!", description: "Your changes have been saved" });
+        await updateEntry(entryId, entryData);
+        setLastSaved(new Date());
+        onBack();
       } else {
-        const result = await createEntry({
-          ...entry,
-          date: currentDate
-        } as Omit<Entry, 'id' | 'user_id' | 'created_at' | 'updated_at'>, currentDate);
+        const result = await createEntry(entryData as Omit<Entry, 'id' | 'user_id' | 'created_at' | 'updated_at'>, currentDate);
         
         if (result.error && result.existingId) {
           // Entry exists, navigate to edit it
@@ -157,11 +179,10 @@ export function DiaryEditor({ entryId, selectedDate, onBack }: DiaryEditorProps)
         }
         
         if (result.data) {
-          toast({ title: "Entry created!", description: "Your journal entry has been saved" });
+          setLastSaved(new Date());
+          onBack();
         }
       }
-      setLastSaved(new Date());
-      onBack();
     } catch (error) {
       console.error('Failed to save entry:', error);
       toast({
@@ -179,7 +200,6 @@ export function DiaryEditor({ entryId, selectedDate, onBack }: DiaryEditorProps)
     
     try {
       await deleteEntry(entryId);
-      toast({ title: "Entry deleted", description: "Your journal entry has been deleted" });
       onBack();
     } catch (error) {
       toast({
@@ -289,14 +309,37 @@ export function DiaryEditor({ entryId, selectedDate, onBack }: DiaryEditorProps)
               <AutosaveIndicator status={autosaveStatus} lastSaved={lastSaved} />
               
               {entryId && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleDelete}
-                  className="hover:bg-destructive hover:text-destructive-foreground"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline" 
+                      size="sm"
+                      className="hover:bg-destructive hover:text-destructive-foreground"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="flex items-center space-x-2">
+                        <AlertTriangle className="h-5 w-5 text-destructive" />
+                        <span>Delete Entry</span>
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to delete this diary entry? This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={handleDelete}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Delete Entry
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               )}
               
               <Button 

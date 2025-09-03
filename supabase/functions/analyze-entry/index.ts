@@ -3,8 +3,80 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
-if (!openAIApiKey) {
-  console.error('OPENAI_API_KEY is not set');
+// Local AI fallback functions
+async function getLocalMoodAnalysis(content: string): Promise<string> {
+  const moodKeywords = {
+    happy: ['happy', 'joy', 'excited', 'wonderful', 'amazing', 'great', 'fantastic', 'love', 'blessed'],
+    sad: ['sad', 'depressed', 'down', 'upset', 'cry', 'tears', 'lonely', 'hurt', 'pain'],
+    excited: ['excited', 'thrilled', 'pumped', 'energetic', 'anticipating', 'eager', 'hyped'],
+    calm: ['calm', 'peaceful', 'relaxed', 'tranquil', 'serene', 'quiet', 'meditative'],
+    stressed: ['stressed', 'anxious', 'worried', 'overwhelmed', 'pressure', 'tense', 'panic'],
+    neutral: ['okay', 'fine', 'normal', 'regular', 'usual', 'standard']
+  };
+  
+  const text = content.toLowerCase();
+  let maxScore = 0;
+  let detectedMood = 'neutral';
+  
+  for (const [mood, keywords] of Object.entries(moodKeywords)) {
+    const score = keywords.reduce((acc, keyword) => {
+      const matches = (text.match(new RegExp(keyword, 'g')) || []).length;
+      return acc + matches;
+    }, 0);
+    
+    if (score > maxScore) {
+      maxScore = score;
+      detectedMood = mood;
+    }
+  }
+  
+  return detectedMood;
+}
+
+async function getLocalSummary(content: string): Promise<string> {
+  const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 10);
+  const importantSentences = sentences
+    .slice(0, 3)
+    .map(s => s.trim())
+    .join('. ');
+  
+  return importantSentences.length > 100 
+    ? importantSentences.substring(0, 97) + '...'
+    : importantSentences || 'A brief reflection on your day.';
+}
+
+async function getLocalReflection(content: string): Promise<string> {
+  const positiveWords = ['accomplished', 'learned', 'grew', 'helped', 'succeeded', 'improved'];
+  const hasPositive = positiveWords.some(word => content.toLowerCase().includes(word));
+  
+  if (hasPositive) {
+    return "Great work today! You're making progress and growing. Keep focusing on the positive steps you're taking.";
+  } else if (content.toLowerCase().includes('difficult') || content.toLowerCase().includes('hard')) {
+    return "It sounds like today had its challenges. Remember that difficult days help us grow stronger. Be gentle with yourself.";
+  } else {
+    return "Every day is a step forward in your journey. Take time to appreciate the small moments and your efforts today.";
+  }
+}
+
+async function getLocalTrendAnalysis(entries: any[]): Promise<string> {
+  if (entries.length === 0) return "Start writing more entries to see your patterns!";
+  
+  const recentEntries = entries.slice(-7);
+  const moodCounts = recentEntries.reduce((acc: any, entry: any) => {
+    acc[entry.mood] = (acc[entry.mood] || 0) + 1;
+    return acc;
+  }, {});
+  
+  const dominantMood = Object.entries(moodCounts)
+    .sort(([,a], [,b]) => (b as number) - (a as number))[0]?.[0];
+  
+  if (dominantMood === 'happy' || dominantMood === 'excited') {
+    return "You've been in great spirits lately! Your positive energy is shining through your entries.";
+  } else if (dominantMood === 'stressed' || dominantMood === 'sad') {
+    return "You seem to be going through a challenging time. Remember to take care of yourself and reach out for support when needed.";
+  } else {
+    return "Your mood has been relatively balanced recently. You're managing life's ups and downs well.";
+  }
 }
 
 const corsHeaders = {
@@ -19,11 +91,11 @@ serve(async (req) => {
   }
 
   try {
-    const { content, action } = await req.json();
+    const { content, action, entries } = await req.json();
 
-    if (!content || !action) {
+    if (!content && action !== 'trend-analysis') {
       return new Response(
-        JSON.stringify({ error: 'Content and action are required' }), 
+        JSON.stringify({ error: 'Content is required' }), 
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -31,12 +103,49 @@ serve(async (req) => {
       );
     }
 
-    if (!openAIApiKey) {
-      console.error('OpenAI API key not configured');
+    if (!action) {
       return new Response(
-        JSON.stringify({ error: 'AI service not configured. Please check your API key.' }), 
+        JSON.stringify({ error: 'Action is required' }), 
         { 
-          status: 500, 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    // Use local AI if OpenAI key is not available or if API fails
+    const useLocalAI = !openAIApiKey;
+    
+    if (useLocalAI) {
+      console.log('Using local AI fallback');
+      let result = '';
+      
+      switch (action) {
+        case 'summarize':
+          result = await getLocalSummary(content);
+          break;
+        case 'detect-mood':
+          result = await getLocalMoodAnalysis(content);
+          break;
+        case 'reflect':
+          result = await getLocalReflection(content);
+          break;
+        case 'trend-analysis':
+          result = await getLocalTrendAnalysis(entries || []);
+          break;
+        default:
+          return new Response(
+            JSON.stringify({ error: 'Invalid action' }), 
+            { 
+              status: 400, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          );
+      }
+      
+      return new Response(
+        JSON.stringify({ result }), 
+        { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
@@ -58,9 +167,13 @@ serve(async (req) => {
         systemPrompt = 'You are a supportive reflection assistant. Provide a brief, encouraging reflection or tip based on the diary entry. Keep it under 150 words and be positive and supportive.';
         userPrompt = `Provide a supportive reflection for this diary entry: "${content}"`;
         break;
+      case 'trend-analysis':
+        systemPrompt = 'You are a mood trend analyst. Analyze the recent diary entries and provide insights about mood patterns, trends, and encouraging observations. Keep it under 200 words.';
+        userPrompt = `Analyze these recent diary entries for mood trends: ${JSON.stringify(entries)}`;
+        break;
       default:
         return new Response(
-          JSON.stringify({ error: 'Invalid action. Use: summarize, detect-mood, or reflect' }), 
+          JSON.stringify({ error: 'Invalid action. Use: summarize, detect-mood, reflect, or trend-analysis' }), 
           { 
             status: 400, 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -89,17 +202,30 @@ serve(async (req) => {
       const errorText = await response.text();
       console.error('OpenAI API error:', response.status, errorText);
       
-      let errorMessage = 'AI service temporarily unavailable';
-      if (response.status === 429) {
-        errorMessage = 'AI service is currently at capacity. Please try again in a moment.';
-      } else if (response.status === 401) {
-        errorMessage = 'AI service authentication failed. Please check configuration.';
+      // Fallback to local AI if OpenAI fails
+      console.log('OpenAI failed, falling back to local AI');
+      let result = '';
+      
+      switch (action) {
+        case 'summarize':
+          result = await getLocalSummary(content);
+          break;
+        case 'detect-mood':
+          result = await getLocalMoodAnalysis(content);
+          break;
+        case 'reflect':
+          result = await getLocalReflection(content);
+          break;
+        case 'trend-analysis':
+          result = await getLocalTrendAnalysis(entries || []);
+          break;
+        default:
+          result = 'AI analysis temporarily unavailable';
       }
       
       return new Response(
-        JSON.stringify({ error: errorMessage }), 
+        JSON.stringify({ result }), 
         { 
-          status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
@@ -117,12 +243,44 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in analyze-entry function:', error);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }), 
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    
+    // Final fallback to local AI
+    try {
+      const { content, action, entries } = await req.json();
+      let result = '';
+      
+      switch (action) {
+        case 'summarize':
+          result = await getLocalSummary(content || '');
+          break;
+        case 'detect-mood':
+          result = await getLocalMoodAnalysis(content || '');
+          break;
+        case 'reflect':
+          result = await getLocalReflection(content || '');
+          break;
+        case 'trend-analysis':
+          result = await getLocalTrendAnalysis(entries || []);
+          break;
+        default:
+          result = 'Analysis temporarily unavailable';
       }
-    );
+      
+      return new Response(
+        JSON.stringify({ result }), 
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    } catch (fallbackError) {
+      console.error('Fallback also failed:', fallbackError);
+      return new Response(
+        JSON.stringify({ result: 'AI analysis temporarily unavailable' }), 
+        { 
+          status: 200, // Return 200 to prevent client errors
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
   }
 });

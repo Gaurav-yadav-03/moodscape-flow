@@ -20,7 +20,7 @@ export interface Entry {
   entry_theme?: string;
   entry_font?: string;
   customBackground?: string;
-  stickyNotes?: any[];
+  stickyNotes?: string;
   created_at: string;
   updated_at: string;
 }

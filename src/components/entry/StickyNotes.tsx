@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, X, StickyNote } from 'lucide-react';
+import { StickyNote, Plus, X } from 'lucide-react';
 
 interface StickyNote {
   id: string;
@@ -16,57 +16,57 @@ interface StickyNotesProps {
 }
 
 const NOTE_COLORS = [
-  'bg-yellow-200 border-yellow-300',
-  'bg-pink-200 border-pink-300',
-  'bg-blue-200 border-blue-300',
-  'bg-green-200 border-green-300',
-  'bg-purple-200 border-purple-300'
+  'bg-yellow-100 border-yellow-300',
+  'bg-pink-100 border-pink-300',
+  'bg-blue-100 border-blue-300',
+  'bg-green-100 border-green-300',
+  'bg-purple-100 border-purple-300'
 ];
 
 export function StickyNotes({ notes, onNotesChange }: StickyNotesProps) {
-  const [isAddingNote, setIsAddingNote] = useState(false);
-  const [newNoteContent, setNewNoteContent] = useState('');
+  const [isAdding, setIsAdding] = useState(false);
+  const [newNote, setNewNote] = useState('');
 
   const addNote = () => {
-    if (newNoteContent.trim()) {
-      const newNote: StickyNote = {
+    if (newNote.trim()) {
+      const note: StickyNote = {
         id: Date.now().toString(),
-        content: newNoteContent.trim(),
+        content: newNote.trim(),
         color: NOTE_COLORS[notes.length % NOTE_COLORS.length]
       };
-      onNotesChange([...notes, newNote]);
-      setNewNoteContent('');
-      setIsAddingNote(false);
+      onNotesChange([...notes, note]);
+      setNewNote('');
+      setIsAdding(false);
     }
   };
 
-  const removeNote = (noteId: string) => {
-    onNotesChange(notes.filter(note => note.id !== noteId));
+  const removeNote = (id: string) => {
+    onNotesChange(notes.filter(note => note.id !== id));
   };
 
-  const updateNote = (noteId: string, content: string) => {
+  const updateNote = (id: string, content: string) => {
     onNotesChange(notes.map(note => 
-      note.id === noteId ? { ...note, content } : note
+      note.id === id ? { ...note, content } : note
     ));
   };
 
   return (
     <Card className="journal-card">
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center space-x-2">
-            <StickyNote className="h-5 w-5" />
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <StickyNote className="h-4 w-4" />
             <span>Quick Notes</span>
-          </CardTitle>
+          </div>
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
-            onClick={() => setIsAddingNote(true)}
-            disabled={isAddingNote}
+            onClick={() => setIsAdding(true)}
+            className="h-8 w-8 p-0"
           >
             <Plus className="h-4 w-4" />
           </Button>
-        </div>
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         {/* Existing Notes */}
@@ -78,59 +78,52 @@ export function StickyNotes({ notes, onNotesChange }: StickyNotesProps) {
             <Button
               variant="ghost"
               size="sm"
-              className="absolute top-1 right-1 h-6 w-6 p-0 hover:bg-black/10"
               onClick={() => removeNote(note.id)}
+              className="absolute top-1 right-1 h-6 w-6 p-0 hover:bg-red-100"
             >
               <X className="h-3 w-3" />
             </Button>
             <Textarea
               value={note.content}
               onChange={(e) => updateNote(note.id, e.target.value)}
-              className="border-none bg-transparent p-0 text-sm resize-none focus-visible:ring-0 pr-8"
+              className="min-h-[60px] text-sm border-none bg-transparent p-0 resize-none focus-visible:ring-0"
               placeholder="Quick thought..."
-              rows={2}
             />
           </div>
         ))}
 
         {/* Add New Note */}
-        {isAddingNote && (
-          <div className={`p-3 rounded-lg border-2 ${NOTE_COLORS[notes.length % NOTE_COLORS.length]} shadow-sm`}>
+        {isAdding && (
+          <div className="p-3 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50">
             <Textarea
-              value={newNoteContent}
-              onChange={(e) => setNewNoteContent(e.target.value)}
-              className="border-none bg-transparent p-0 text-sm resize-none focus-visible:ring-0"
-              placeholder="What's on your mind?"
-              rows={2}
+              value={newNote}
+              onChange={(e) => setNewNote(e.target.value)}
+              className="min-h-[60px] text-sm border-none bg-transparent p-0 resize-none focus-visible:ring-0"
+              placeholder="Add a quick note..."
               autoFocus
             />
-            <div className="flex justify-end space-x-2 mt-2">
-              <Button
-                variant="ghost"
-                size="sm"
+            <div className="flex space-x-2 mt-2">
+              <Button onClick={addNote} size="sm" disabled={!newNote.trim()}>
+                Add
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
                 onClick={() => {
-                  setIsAddingNote(false);
-                  setNewNoteContent('');
+                  setIsAdding(false);
+                  setNewNote('');
                 }}
               >
                 Cancel
-              </Button>
-              <Button
-                size="sm"
-                onClick={addNote}
-                disabled={!newNoteContent.trim()}
-              >
-                Add
               </Button>
             </div>
           </div>
         )}
 
-        {notes.length === 0 && !isAddingNote && (
-          <div className="text-center py-4 text-muted-foreground">
-            <StickyNote className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">Add quick notes and thoughts</p>
-          </div>
+        {notes.length === 0 && !isAdding && (
+          <p className="text-sm text-muted-foreground text-center py-4">
+            No quick notes yet. Click + to add one!
+          </p>
         )}
       </CardContent>
     </Card>
