@@ -209,14 +209,34 @@ export function DiaryEditor({ entryId, selectedDate, onBack }: DiaryEditorProps)
     if (!entryId) return;
     
     try {
-      await deleteEntry(entryId);
+      setSaving(true);
+      const { error } = await deleteEntry(entryId);
+      
+      if (error) {
+        toast({
+          title: "Failed to delete",
+          description: "Could not delete the entry",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Entry deleted",
+        description: "Your diary entry has been deleted",
+      });
+      
+      setShowDeleteConfirm(false);
       onBack();
     } catch (error) {
+      console.error('Delete error:', error);
       toast({
         title: "Delete failed",
-        description: "Could not delete the entry",
+        description: "An error occurred while deleting",
         variant: "destructive",
       });
+    } finally {
+      setSaving(false);
     }
   };
 

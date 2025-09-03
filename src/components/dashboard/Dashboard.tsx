@@ -21,6 +21,7 @@ import { EntriesListView } from './EntriesListView';
 import { CompactMoodCalendar } from './CompactMoodCalendar';
 import { MoodTrends } from './MoodTrends';
 import { BadgeDisplay } from './BadgeDisplay';
+import { MoodVisualization } from './MoodVisualization';
 import { useEntries } from '@/hooks/useEntries';
 import { useStreaks } from '@/hooks/useStreaks';
 import { MOOD_OPTIONS, getTodaysDate } from '@/types/journal';
@@ -231,7 +232,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           />
         )}
         {view === 'mood' && (
-          <MoodTrends entries={entries} />
+          <MoodVisualization entries={entries} />
         )}
         {view === 'badges' && (
           <BadgeDisplay entries={entries} />
