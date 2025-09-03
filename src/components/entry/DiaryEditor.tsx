@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -65,9 +65,10 @@ export function DiaryEditor({ entryId, selectedDate, onBack }: DiaryEditorProps)
   const [aiReflection, setAiReflection] = useState<string>('');
   const [customTheme, setCustomTheme] = useState<string>('default');
   const [stickyNotes, setStickyNotes] = useState<any[]>([]);
-  const [textareaRef, setTextareaRef] = useState<HTMLTextAreaElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [currentDate, setCurrentDate] = useState(selectedDate || getTodaysDate());
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const { entries, createEntry, updateEntry, deleteEntry, getEntryByDate } = useEntries();
   const { settings } = useUserSettings();
@@ -122,28 +123,37 @@ export function DiaryEditor({ entryId, selectedDate, onBack }: DiaryEditorProps)
     loadEntry();
   }, [entryId, currentDate, entries, getEntryByDate, settings]);
 
-  // Auto-save functionality
-  const autoSave = useCallback(async () => {
-    if (!entry.content?.trim() || !entryId) return;
-
-    setAutosaveStatus('saving');
-    try {
-      await updateEntry(entryId, entry);
-      setAutosaveStatus('saved');
-      setLastSaved(new Date());
-      setTimeout(() => setAutosaveStatus('idle'), 2000);
-    } catch (error) {
-      setAutosaveStatus('error');
-      setTimeout(() => setAutosaveStatus('idle'), 3000);
-    }
-  }, [entry, entryId, updateEntry]);
-
+  // Improved autosave with proper debouncing
   useEffect(() => {
-    if (!entry.content?.trim() || !entryId) return;
+    // Clear existing timeout
+    if (autosaveTimeoutRef.current) {
+      clearTimeout(autosaveTimeoutRef.current);
+    }
 
-    const timer = setTimeout(autoSave, 2000);
-    return () => clearTimeout(timer);
-  }, [entry.content, entry.title, entry.mood, autoSave]);
+    // Only autosave if we have an existing entry and content
+    if (!entryId || !entry.content?.trim()) return;
+
+    // Set new timeout for autosave
+    autosaveTimeoutRef.current = setTimeout(async () => {
+      setAutosaveStatus('saving');
+      try {
+        await updateEntry(entryId, entry);
+        setAutosaveStatus('saved');
+        setLastSaved(new Date());
+        setTimeout(() => setAutosaveStatus('idle'), 2000);
+      } catch (error) {
+        setAutosaveStatus('error');
+        setTimeout(() => setAutosaveStatus('idle'), 3000);
+      }
+    }, 1500); // Debounce for 1.5 seconds
+
+    // Cleanup function
+    return () => {
+      if (autosaveTimeoutRef.current) {
+        clearTimeout(autosaveTimeoutRef.current);
+      }
+    };
+  }, [entry.content, entry.title, entry.mood, entryId, updateEntry]);
 
   const handleSave = async () => {
     if (!entry.content?.trim()) {
@@ -229,21 +239,22 @@ export function DiaryEditor({ entryId, selectedDate, onBack }: DiaryEditorProps)
   const selectedFont = FONT_OPTIONS.find(f => f.value === entry.font_style) || FONT_OPTIONS[0];
   const wordCount = entry.content?.split(/\s+/).filter(word => word.length > 0).length || 0;
 
-  const handleEmojiInsert = (emoji: string) => {
-    if (textareaRef) {
-      const start = textareaRef.selectionStart;
-      const end = textareaRef.selectionEnd;
+  const handleEmojiInsert = useCallback((emoji: string) => {
+    if (textareaRef.current) {
+      const textarea = textareaRef.current;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
       const currentContent = entry.content || '';
       const newContent = currentContent.slice(0, start) + emoji + currentContent.slice(end);
       setEntry(prev => ({ ...prev, content: newContent }));
       
       // Restore cursor position after emoji
       setTimeout(() => {
-        textareaRef.focus();
-        textareaRef.setSelectionRange(start + emoji.length, start + emoji.length);
+        textarea.focus();
+        textarea.setSelectionRange(start + emoji.length, start + emoji.length);
       }, 0);
     }
-  };
+  }, [entry.content]);
 
   const handleThemeChange = (theme: string, customBackground?: string) => {
     setCustomTheme(theme);
@@ -386,7 +397,7 @@ export function DiaryEditor({ entryId, selectedDate, onBack }: DiaryEditorProps)
                   placeholder="What's on your mind today?"
                   value={entry.content || ''}
                   onChange={(e) => setEntry(prev => ({ ...prev, content: e.target.value }))}
-                  ref={(ref) => setTextareaRef(ref)}
+                  ref={textareaRef}
                   className={cn(
                     "min-h-[400px] resize-none border-none bg-transparent p-0 text-base leading-relaxed focus-visible:ring-0",
                     FONT_OPTIONS.find(f => f.value === entry.entry_font)?.className || selectedFont.className
