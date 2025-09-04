@@ -4,15 +4,16 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { StickyNote, Plus, X } from 'lucide-react';
 
-interface StickyNote {
+interface StickyNoteType {
   id: string;
-  content: string;
+  text: string;
   color: string;
+  timestamp: string;
 }
 
 interface StickyNotesProps {
-  notes: StickyNote[];
-  onNotesChange: (notes: StickyNote[]) => void;
+  notes: StickyNoteType[];
+  onNotesChange: (notes: StickyNoteType[]) => void;
 }
 
 const NOTE_COLORS = [
@@ -29,10 +30,11 @@ export function StickyNotes({ notes, onNotesChange }: StickyNotesProps) {
 
   const addNote = () => {
     if (newNote.trim()) {
-      const note: StickyNote = {
+      const note: StickyNoteType = {
         id: Date.now().toString(),
-        content: newNote.trim(),
-        color: NOTE_COLORS[notes.length % NOTE_COLORS.length]
+        text: newNote.trim(),
+        color: NOTE_COLORS[notes.length % NOTE_COLORS.length],
+        timestamp: new Date().toLocaleTimeString()
       };
       onNotesChange([...notes, note]);
       setNewNote('');
@@ -44,9 +46,9 @@ export function StickyNotes({ notes, onNotesChange }: StickyNotesProps) {
     onNotesChange(notes.filter(note => note.id !== id));
   };
 
-  const updateNote = (id: string, content: string) => {
+  const updateNote = (id: string, text: string) => {
     onNotesChange(notes.map(note => 
-      note.id === id ? { ...note, content } : note
+      note.id === id ? { ...note, text } : note
     ));
   };
 
@@ -84,7 +86,7 @@ export function StickyNotes({ notes, onNotesChange }: StickyNotesProps) {
               <X className="h-3 w-3" />
             </Button>
             <Textarea
-              value={note.content}
+              value={note.text}
               onChange={(e) => updateNote(note.id, e.target.value)}
               className="min-h-[60px] text-sm border-none bg-transparent p-0 resize-none focus-visible:ring-0"
               placeholder="Quick thought..."

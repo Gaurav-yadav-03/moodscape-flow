@@ -98,14 +98,23 @@ export function useEntries() {
 
   const updateEntry = async (id: string, entryData: Partial<Entry>) => {
     try {
+      // Filter out undefined values and ensure proper data types
+      const cleanedData = Object.fromEntries(
+        Object.entries(entryData).filter(([_, value]) => value !== undefined)
+      );
+
       const { data, error } = await supabase
         .from('entries')
-        .update(entryData)
+        .update(cleanedData)
         .eq('id', id)
+        .eq('user_id', user?.id!) // Ensure user owns this entry
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase update error:', error);
+        throw error;
+      }
       
       setEntries(prev => prev.map(entry => entry.id === id ? data : entry));
       
@@ -123,14 +132,19 @@ export function useEntries() {
 
   const deleteEntry = async (id: string) => {
     try {
-      // Soft delete by setting deleted_at timestamp
+      // Hard delete for immediate removal
       const { error } = await supabase
         .from('entries')
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', id);
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user?.id!); // Ensure user owns this entry
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase delete error:', error);
+        throw error;
+      }
       
+      // Immediately remove from UI
       setEntries(prev => prev.filter(entry => entry.id !== id));
       return { error: null };
     } catch (error) {

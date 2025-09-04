@@ -3,15 +3,58 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
-// Local AI fallback functions
+// Real local AI using transformers.js for offline analysis
+let localAIInitialized = false;
+let pipeline: any = null;
+
+async function initializeLocalAI() {
+  if (localAIInitialized) return;
+  
+  try {
+    // Import transformers.js for local AI processing
+    const { pipeline: createPipeline } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@latest/dist/transformers.min.js');
+    
+    // Use lightweight sentiment analysis model for mood detection
+    pipeline = await createPipeline('sentiment-analysis', 'Xenova/distilbert-base-uncased-finetuned-sst-2-english');
+    localAIInitialized = true;
+    console.log('Local AI pipeline initialized');
+  } catch (error) {
+    console.error('Failed to initialize local AI:', error);
+    // Fall back to rule-based if transformers.js fails
+  }
+}
+
+// Enhanced local AI functions with real ML models
 async function getLocalMoodAnalysis(content: string): Promise<string> {
+  try {
+    if (pipeline) {
+      // Use ML model for sentiment analysis
+      const result = await pipeline(content);
+      const sentiment = result[0];
+      
+      // Map sentiment to mood
+      if (sentiment.label === 'POSITIVE') {
+        if (sentiment.score > 0.8) return 'excited';
+        if (sentiment.score > 0.6) return 'happy';
+        return 'calm';
+      } else {
+        if (sentiment.score > 0.8) return 'sad';
+        if (sentiment.score > 0.6) return 'stressed';
+        return 'neutral';
+      }
+    }
+  } catch (error) {
+    console.log('ML model failed, using keyword analysis:', error);
+  }
+  
+  // Fallback to enhanced keyword analysis
   const moodKeywords = {
-    happy: ['happy', 'joy', 'excited', 'wonderful', 'amazing', 'great', 'fantastic', 'love', 'blessed'],
-    sad: ['sad', 'depressed', 'down', 'upset', 'cry', 'tears', 'lonely', 'hurt', 'pain'],
-    excited: ['excited', 'thrilled', 'pumped', 'energetic', 'anticipating', 'eager', 'hyped'],
-    calm: ['calm', 'peaceful', 'relaxed', 'tranquil', 'serene', 'quiet', 'meditative'],
-    stressed: ['stressed', 'anxious', 'worried', 'overwhelmed', 'pressure', 'tense', 'panic'],
-    neutral: ['okay', 'fine', 'normal', 'regular', 'usual', 'standard']
+    excited: ['excited', 'thrilled', 'pumped', 'energetic', 'amazing', 'fantastic', 'incredible', 'awesome'],
+    happy: ['happy', 'joy', 'wonderful', 'great', 'love', 'blessed', 'grateful', 'cheerful', 'delighted'],
+    calm: ['calm', 'peaceful', 'relaxed', 'tranquil', 'serene', 'quiet', 'meditative', 'content'],
+    stressed: ['stressed', 'anxious', 'worried', 'overwhelmed', 'pressure', 'tense', 'panic', 'frustrated'],
+    sad: ['sad', 'depressed', 'down', 'upset', 'cry', 'tears', 'lonely', 'hurt', 'pain', 'disappointed'],
+    neutral: ['okay', 'fine', 'normal', 'regular', 'usual', 'standard', 'ordinary']
   };
   
   const text = content.toLowerCase();
@@ -20,7 +63,7 @@ async function getLocalMoodAnalysis(content: string): Promise<string> {
   
   for (const [mood, keywords] of Object.entries(moodKeywords)) {
     const score = keywords.reduce((acc, keyword) => {
-      const matches = (text.match(new RegExp(keyword, 'g')) || []).length;
+      const matches = (text.match(new RegExp(`\\b${keyword}\\b`, 'g')) || []).length;
       return acc + matches;
     }, 0);
     
@@ -113,11 +156,16 @@ serve(async (req) => {
       );
     }
 
+    // Initialize local AI pipeline if needed
+    if (!openAIApiKey) {
+      await initializeLocalAI();
+    }
+    
     // Use local AI if OpenAI key is not available or if API fails
     const useLocalAI = !openAIApiKey;
     
     if (useLocalAI) {
-      console.log('Using local AI fallback');
+      console.log('Using local AI with ML models');
       let result = '';
       
       switch (action) {
@@ -203,7 +251,8 @@ serve(async (req) => {
       console.error('OpenAI API error:', response.status, errorText);
       
       // Fallback to local AI if OpenAI fails
-      console.log('OpenAI failed, falling back to local AI');
+      console.log('OpenAI failed, falling back to local AI with ML models');
+      await initializeLocalAI();
       let result = '';
       
       switch (action) {

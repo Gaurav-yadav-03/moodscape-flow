@@ -22,6 +22,7 @@ import { CompactMoodCalendar } from './CompactMoodCalendar';
 import { MoodTrends } from './MoodTrends';
 import { BadgeDisplay } from './BadgeDisplay';
 import { MoodVisualization } from './MoodVisualization';
+import { MoodInsights } from './MoodInsights';
 import { useEntries } from '@/hooks/useEntries';
 import { useStreaks } from '@/hooks/useStreaks';
 import { MOOD_OPTIONS, getTodaysDate } from '@/types/journal';
@@ -232,7 +233,10 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           />
         )}
         {view === 'mood' && (
-          <MoodVisualization entries={entries} />
+          <div className="space-y-6">
+            <MoodVisualization entries={entries} />
+            <MoodInsights entries={entries} />
+          </div>
         )}
         {view === 'badges' && (
           <BadgeDisplay entries={entries} />
