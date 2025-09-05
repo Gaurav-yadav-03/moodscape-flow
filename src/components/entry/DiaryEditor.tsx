@@ -71,7 +71,7 @@ export function DiaryEditor({ entryId, selectedDate, onBack }: DiaryEditorProps)
   const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const { entries, createEntry, updateEntry, deleteEntry, getEntryByDate } = useEntries();
-  const { settings } = useUserSettings();
+  const { settings, updateSettings } = useUserSettings();
   const { summarizeEntry, detectMood, getReflection, loading: aiLoading } = useAI();
   const { toast } = useToast();
 
@@ -156,9 +156,9 @@ export function DiaryEditor({ entryId, selectedDate, onBack }: DiaryEditorProps)
   }, [entry.content, entry.title, entry.mood, entryId, updateEntry]);
 
   const handleSave = async () => {
-    if (!entry.content?.trim()) {
+    if (!entry.content?.trim() && !entry.title?.trim()) {
       toast({
-        title: "Content required",
+        title: "Nothing to save",
         description: "Please write something before saving",
         variant: "destructive",
       });
@@ -168,35 +168,55 @@ export function DiaryEditor({ entryId, selectedDate, onBack }: DiaryEditorProps)
     setSaving(true);
     try {
       const entryData = {
-        ...entry,
-        date: currentDate,
-        stickyNotes: JSON.stringify(stickyNotes)
+        title: entry.title || '',
+        content: entry.content || '',
+        mood: entry.mood,
+        theme: entry.theme,
+        font_style: entry.font_style,
+        date: currentDate
       };
 
+      let result;
       if (entryId) {
-        await updateEntry(entryId, entryData);
-        setLastSaved(new Date());
-        onBack();
+        result = await updateEntry(entryId, entryData);
+        if (!result.error) {
+          setLastSaved(new Date());
+          toast({ title: "Entry updated", description: "Changes saved successfully" });
+        }
       } else {
-        const result = await createEntry(entryData as Omit<Entry, 'id' | 'user_id' | 'created_at' | 'updated_at'>, currentDate);
+        result = await createEntry(entryData, currentDate);
         
         if (result.error && result.existingId) {
-          // Entry exists, navigate to edit it
-          window.history.replaceState(null, '', `?entry=${result.existingId}`);
-          const existingEntry = entries.find(e => e.id === result.existingId);
-          if (existingEntry) setEntry(existingEntry);
-          return;
+          const confirmOverwrite = window.confirm(
+            'An entry already exists for this date. Do you want to edit the existing entry instead?'
+          );
+          if (confirmOverwrite) {
+            onBack();
+            return;
+          }
         }
         
         if (result.data) {
           setLastSaved(new Date());
-          onBack();
+          toast({ title: "Entry saved", description: "Your diary entry has been saved" });
         }
       }
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      // Update user theme settings if changed
+      if (settings && updateSettings && entry.theme !== settings.default_theme) {
+        await updateSettings({ default_theme: entry.theme });
+      }
+
+      setTimeout(() => onBack(), 1000);
+
     } catch (error) {
-      console.error('Failed to save entry:', error);
+      console.error('Error saving entry:', error);
       toast({
-        title: "Save failed",
+        title: "Failed to save",
         description: "Could not save your entry",
         variant: "destructive",
       });
@@ -276,14 +296,17 @@ export function DiaryEditor({ entryId, selectedDate, onBack }: DiaryEditorProps)
     }
   }, [entry.content]);
 
-  const handleThemeChange = (theme: string, customBackground?: string) => {
+  const handleThemeChange = (theme: string) => {
     setCustomTheme(theme);
     setEntry(prev => ({ 
       ...prev, 
       entry_theme: theme,
-      theme: theme, 
-      customBackground 
+      theme: theme
     }));
+    // Save theme preference immediately
+    if (settings && updateSettings) {
+      updateSettings({ default_theme: theme });
+    }
   };
 
   const handleFontChange = (font: string) => {
@@ -413,16 +436,18 @@ export function DiaryEditor({ entryId, selectedDate, onBack }: DiaryEditorProps)
                 </div>
               </CardHeader>
               <CardContent>
-                <Textarea
-                  placeholder="What's on your mind today?"
-                  value={entry.content || ''}
-                  onChange={(e) => setEntry(prev => ({ ...prev, content: e.target.value }))}
-                  ref={textareaRef}
-                  className={cn(
-                    "min-h-[400px] resize-none border-none bg-transparent p-0 text-base leading-relaxed focus-visible:ring-0",
-                    FONT_OPTIONS.find(f => f.value === entry.entry_font)?.className || selectedFont.className
-                  )}
-                />
+                <div className={`p-6 rounded-lg theme-${entry.theme || 'clean'}`}>
+                  <Textarea
+                    placeholder="What's on your mind today?"
+                    value={entry.content || ''}
+                    onChange={(e) => setEntry(prev => ({ ...prev, content: e.target.value }))}
+                    ref={textareaRef}
+                    className={cn(
+                      "min-h-[400px] resize-none border-0 shadow-none text-base leading-relaxed focus-visible:ring-1 focus-visible:ring-primary",
+                      FONT_OPTIONS.find(f => f.value === entry.entry_font)?.className || selectedFont.className
+                    )}
+                  />
+                </div>
               </CardContent>
             </Card>
           </div>

@@ -131,6 +131,61 @@
     background: var(--gradient-sunset);
   }
 
+  /* Theme styles for writing area */
+  .theme-clean {
+    @apply bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100;
+  }
+
+  .theme-clean textarea,
+  .theme-clean input {
+    @apply bg-transparent border-gray-200 dark:border-gray-700 focus:border-primary;
+  }
+
+  .theme-minimal {
+    @apply bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200;
+  }
+
+  .theme-minimal textarea,
+  .theme-minimal input {
+    @apply bg-gray-100/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600;
+  }
+
+  .theme-dark {
+    @apply bg-gray-900 dark:bg-black text-gray-100 dark:text-white;
+  }
+
+  .theme-dark textarea,
+  .theme-dark input {
+    @apply bg-gray-800/50 dark:bg-gray-900/50 border-gray-600 dark:border-gray-500 text-gray-100;
+  }
+
+  .theme-vintage {
+    @apply bg-amber-50 dark:bg-amber-900/20 text-amber-900 dark:text-amber-100;
+  }
+
+  .theme-vintage textarea,
+  .theme-vintage input {
+    @apply bg-amber-100/30 dark:bg-amber-800/30 border-amber-300 dark:border-amber-700;
+  }
+
+  .theme-nature {
+    @apply bg-green-50 dark:bg-green-900/20 text-green-900 dark:text-green-100;
+  }
+
+  .theme-nature textarea,
+  .theme-nature input {
+    @apply bg-green-100/30 dark:bg-green-800/30 border-green-300 dark:border-green-700;
+  }
+
+  .theme-ocean {
+    @apply bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100;
+  }
+
+  .theme-ocean textarea,
+  .theme-ocean input {
+    @apply bg-blue-100/30 dark:bg-blue-800/30 border-blue-300 dark:border-blue-700;
+  }
+
   .mood-happy {
     @apply bg-[hsl(var(--mood-happy))] text-white;
   }

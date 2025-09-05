@@ -91,10 +91,10 @@ export function MoodVisualization({ entries }: MoodVisualizationProps) {
           <CardTitle>Mood Heatmap - Last 30 Days</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-7 gap-1 text-xs">
+          <div className="grid grid-cols-7 gap-0.5 text-xs max-w-md mx-auto">
             {/* Day labels */}
             {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
-              <div key={i} className="text-center text-muted-foreground p-1">
+              <div key={i} className="text-center text-muted-foreground p-1 text-[10px]">
                 {day}
               </div>
             ))}
@@ -108,17 +108,17 @@ export function MoodVisualization({ entries }: MoodVisualizationProps) {
               return (
                 <div
                   key={i}
-                  className={`aspect-square rounded-sm border ${getMoodColor(entry?.mood)} ${getMoodIntensity(entry?.content)} 
-                    ${isToday ? 'ring-2 ring-primary' : ''} 
-                    hover:scale-110 transition-transform cursor-pointer`}
+                  className={`aspect-square rounded-sm border w-4 h-4 ${getMoodColor(entry?.mood)} ${getMoodIntensity(entry?.content)} 
+                    ${isToday ? 'ring-1 ring-primary ring-offset-1' : ''} 
+                    hover:scale-125 transition-all cursor-pointer relative`}
                   title={entry ? 
                     `${format(day, 'MMM d')}: ${entry.mood} ${entry.title ? `- ${entry.title}` : ''}` : 
                     `${format(day, 'MMM d')}: No entry`
                   }
                 >
                   {entry && (
-                    <div className="h-full w-full flex items-center justify-center">
-                      <span className="text-xs">
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-[8px]">
                         {MOOD_OPTIONS.find(m => m.value === entry.mood)?.emoji}
                       </span>
                     </div>

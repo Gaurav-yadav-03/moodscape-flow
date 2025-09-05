@@ -49,12 +49,12 @@ export function AutosaveIndicator({ status, lastSaved }: AutosaveIndicatorProps)
   // Only show when actively saving or if there was an error
   if (status === 'idle') return null;
   
-  // For saved status, show briefly then fade
+  // For saved status, show briefly with subtle styling
   if (status === 'saved') {
     return (
-      <div className={`flex items-center space-x-1 text-xs font-medium px-3 py-1 rounded-full bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 ${getColorClass()}`}>
+      <div className={`flex items-center space-x-1 text-xs px-2 py-1 rounded-md bg-green-50/80 dark:bg-green-900/10 border-0 ${getColorClass()} transition-opacity duration-500`}>
         {getIcon()}
-        <span>{getText()}</span>
+        <span className="font-normal">{getText()}</span>
       </div>
     );
   }

@@ -1,104 +1,142 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
-// Real local AI using transformers.js for offline analysis
-let localAIInitialized = false;
-let pipeline: any = null;
-
-async function initializeLocalAI() {
-  if (localAIInitialized) return;
+function extractKeywords(text: string): string[] {
+  const words = text.toLowerCase().split(/\W+/);
+  const commonWords = new Set(['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'was', 'are', 'were', 'be', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'can', 'this', 'that', 'these', 'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them', 'my', 'your', 'his', 'her', 'its', 'our', 'their']);
   
-  try {
-    // Import transformers.js for local AI processing
-    const { pipeline: createPipeline } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@latest/dist/transformers.min.js');
+  const keywords = words
+    .filter(word => word.length > 3 && !commonWords.has(word))
+    .reduce((acc: Record<string, number>, word) => {
+      acc[word] = (acc[word] || 0) + 1;
+      return acc;
+    }, {});
     
-    // Use lightweight sentiment analysis model for mood detection
-    pipeline = await createPipeline('sentiment-analysis', 'Xenova/distilbert-base-uncased-finetuned-sst-2-english');
-    localAIInitialized = true;
-    console.log('Local AI pipeline initialized');
-  } catch (error) {
-    console.error('Failed to initialize local AI:', error);
-    // Fall back to rule-based if transformers.js fails
-  }
+  return Object.entries(keywords)
+    .sort(([,a], [,b]) => b - a)
+    .slice(0, 8)
+    .map(([word]) => word);
 }
 
-// Enhanced local AI functions with real ML models
-async function getLocalMoodAnalysis(content: string): Promise<string> {
-  try {
-    if (pipeline) {
-      // Use ML model for sentiment analysis
-      const result = await pipeline(content);
-      const sentiment = result[0];
-      
-      // Map sentiment to mood
-      if (sentiment.label === 'POSITIVE') {
-        if (sentiment.score > 0.8) return 'excited';
-        if (sentiment.score > 0.6) return 'happy';
-        return 'calm';
-      } else {
-        if (sentiment.score > 0.8) return 'sad';
-        if (sentiment.score > 0.6) return 'stressed';
-        return 'neutral';
-      }
-    }
-  } catch (error) {
-    console.log('ML model failed, using keyword analysis:', error);
-  }
+function analyzeSentiment(text: string) {
+  const positiveWords = ['happy', 'joy', 'love', 'excited', 'great', 'amazing', 'wonderful', 'fantastic', 'good', 'beautiful', 'perfect', 'awesome', 'brilliant', 'excellent', 'pleased', 'grateful', 'thankful', 'blessed', 'content', 'peaceful', 'calm', 'relaxed', 'optimistic', 'hopeful', 'confident'];
+  const negativeWords = ['sad', 'angry', 'hate', 'terrible', 'awful', 'horrible', 'bad', 'worse', 'worst', 'disappointed', 'frustrated', 'stressed', 'worried', 'anxious', 'depressed', 'upset', 'annoyed', 'irritated', 'lonely', 'hurt', 'pain', 'suffering', 'difficult', 'hard', 'struggle'];
   
-  // Fallback to enhanced keyword analysis
-  const moodKeywords = {
-    excited: ['excited', 'thrilled', 'pumped', 'energetic', 'amazing', 'fantastic', 'incredible', 'awesome'],
-    happy: ['happy', 'joy', 'wonderful', 'great', 'love', 'blessed', 'grateful', 'cheerful', 'delighted'],
-    calm: ['calm', 'peaceful', 'relaxed', 'tranquil', 'serene', 'quiet', 'meditative', 'content'],
-    stressed: ['stressed', 'anxious', 'worried', 'overwhelmed', 'pressure', 'tense', 'panic', 'frustrated'],
-    sad: ['sad', 'depressed', 'down', 'upset', 'cry', 'tears', 'lonely', 'hurt', 'pain', 'disappointed'],
-    neutral: ['okay', 'fine', 'normal', 'regular', 'usual', 'standard', 'ordinary']
+  const words = text.toLowerCase().split(/\W+/);
+  const positiveCount = words.filter(word => positiveWords.includes(word)).length;
+  const negativeCount = words.filter(word => negativeWords.includes(word)).length;
+  
+  const score = (positiveCount - negativeCount) / Math.max(words.length / 10, 1);
+  
+  let description = '';
+  if (score > 0.3) description = 'This reflects a positive, uplifting tone.';
+  else if (score < -0.3) description = 'This shows some challenging emotions.';
+  else description = 'This has a balanced, neutral emotional tone.';
+  
+  return { 
+    score, 
+    positiveWords: words.filter(w => positiveWords.includes(w)),
+    negativeWords: words.filter(w => negativeWords.includes(w)),
+    description 
   };
-  
-  const text = content.toLowerCase();
-  let maxScore = 0;
-  let detectedMood = 'neutral';
-  
-  for (const [mood, keywords] of Object.entries(moodKeywords)) {
-    const score = keywords.reduce((acc, keyword) => {
-      const matches = (text.match(new RegExp(`\\b${keyword}\\b`, 'g')) || []).length;
-      return acc + matches;
-    }, 0);
-    
-    if (score > maxScore) {
-      maxScore = score;
-      detectedMood = mood;
-    }
-  }
-  
-  return detectedMood;
 }
 
 async function getLocalSummary(content: string): Promise<string> {
   const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 10);
-  const importantSentences = sentences
-    .slice(0, 3)
-    .map(s => s.trim())
-    .join('. ');
+  if (sentences.length <= 2) return content.substring(0, 200) + (content.length > 200 ? '...' : '');
   
-  return importantSentences.length > 100 
-    ? importantSentences.substring(0, 97) + '...'
-    : importantSentences || 'A brief reflection on your day.';
+  const keywords = extractKeywords(content);
+  const sentiment = analyzeSentiment(content);
+  
+  // Get key sentences with importance scoring
+  const scoredSentences = sentences.map((sentence, index) => {
+    let score = 0;
+    
+    // First and last sentences are important
+    if (index === 0 || index === sentences.length - 1) score += 2;
+    
+    // Sentences with keywords are important
+    keywords.forEach(keyword => {
+      if (sentence.toLowerCase().includes(keyword.toLowerCase())) score += 1;
+    });
+    
+    // Emotional sentences are important
+    if (sentiment.positiveWords.some(word => sentence.toLowerCase().includes(word)) ||
+        sentiment.negativeWords.some(word => sentence.toLowerCase().includes(word))) {
+      score += 1;
+    }
+    
+    return { sentence: sentence.trim(), score };
+  }).sort((a, b) => b.score - a.score);
+  
+  const topSentences = scoredSentences.slice(0, 2).map(s => s.sentence);
+  const summary = topSentences.join('. ') + '.';
+  
+  return `${summary} Main themes include ${keywords.slice(0, 2).join(' and ')}. ${sentiment.description}`;
+}
+
+async function getLocalMoodAnalysis(content: string): Promise<string> {
+  const words = content.toLowerCase().split(/\W+/);
+  
+  const moodPatterns = {
+    happy: ['happy', 'joy', 'joyful', 'love', 'amazing', 'wonderful', 'great', 'awesome', 'fantastic', 'perfect', 'brilliant', 'delighted', 'cheerful', 'optimistic', 'grateful', 'blessed', 'smile', 'laugh'],
+    excited: ['excited', 'thrilled', 'energetic', 'pumped', 'enthusiastic', 'adventure', 'party', 'celebration', 'achievement', 'success', 'victory', 'breakthrough', 'opportunity', 'ambitious', 'motivated'],
+    calm: ['calm', 'peaceful', 'serene', 'quiet', 'tranquil', 'relaxed', 'meditation', 'mindful', 'balanced', 'centered', 'zen', 'gentle', 'soothing', 'comfortable', 'content'],
+    stressed: ['stressed', 'pressure', 'deadline', 'busy', 'overwhelmed', 'anxious', 'worried', 'tense', 'frantic', 'rushing', 'chaos', 'burden', 'exhausted', 'tired', 'difficult'],
+    sad: ['sad', 'down', 'depressed', 'lonely', 'hurt', 'disappointed', 'lost', 'empty', 'broken', 'crying', 'tears', 'grief', 'sorrow', 'melancholy', 'blue', 'heartbroken'],
+    neutral: ['okay', 'fine', 'normal', 'regular', 'usual', 'routine', 'typical']
+  };
+  
+  const scores: Record<string, number> = {};
+  
+  // Calculate mood scores with weighted importance
+  Object.entries(moodPatterns).forEach(([mood, keywords]) => {
+    scores[mood] = keywords.reduce((score, keyword) => {
+      const matches = words.filter(word => word.includes(keyword) || keyword.includes(word)).length;
+      return score + matches;
+    }, 0);
+  });
+  
+  // Apply contextual weights
+  const textLength = words.length;
+  if (textLength > 100) scores.calm += 0.5; // Longer entries suggest reflection
+  
+  // Find dominant mood
+  const maxScore = Math.max(...Object.values(scores));
+  if (maxScore === 0) return 'neutral';
+  
+  const dominantMood = Object.entries(scores).find(([_, score]) => score === maxScore)?.[0];
+  return dominantMood || 'neutral';
 }
 
 async function getLocalReflection(content: string): Promise<string> {
-  const positiveWords = ['accomplished', 'learned', 'grew', 'helped', 'succeeded', 'improved'];
-  const hasPositive = positiveWords.some(word => content.toLowerCase().includes(word));
+  const keywords = extractKeywords(content);
+  const sentiment = analyzeSentiment(content);
+  const wordCount = content.split(' ').length;
+  const words = content.toLowerCase().split(/\W+/);
   
-  if (hasPositive) {
-    return "Great work today! You're making progress and growing. Keep focusing on the positive steps you're taking.";
-  } else if (content.toLowerCase().includes('difficult') || content.toLowerCase().includes('hard')) {
-    return "It sounds like today had its challenges. Remember that difficult days help us grow stronger. Be gentle with yourself.";
-  } else {
-    return "Every day is a step forward in your journey. Take time to appreciate the small moments and your efforts today.";
+  // Enhanced context-aware reflections
+  if (sentiment.score > 0.4) {
+    const positiveTheme = keywords.find(k => ['success', 'achievement', 'happy', 'joy', 'love', 'grateful'].some(p => k.includes(p))) || 'growth';
+    return `Your positive energy around ${positiveTheme} really shines through! This kind of mindset creates momentum for even more good things ahead.`;
+  } 
+  
+  if (sentiment.score < -0.3) {
+    const challenge = keywords.find(k => ['work', 'relationship', 'health', 'stress', 'difficult'].some(c => k.includes(c))) || 'this situation';
+    return `I can sense you're working through some challenges with ${challenge}. Your ability to express these feelings shows emotional intelligence. Better days are coming.`;
   }
+  
+  if (words.some(w => ['goal', 'plan', 'future', 'want', 'hope', 'dream'].includes(w))) {
+    return `Your forward-thinking approach and ${wordCount > 150 ? 'detailed planning' : 'clear intentions'} show great self-awareness. Small consistent steps lead to big changes.`;
+  }
+  
+  if (wordCount > 200) {
+    return `Your thoughtful, detailed reflection shows how much you value personal growth. This kind of self-examination is a powerful tool for positive change.`;
+  }
+  
+  const mainTheme = keywords[0] || 'life';
+  return `Your honest reflection on ${mainTheme} demonstrates mindfulness and emotional maturity. Keep nurturing this self-awareness—it's a real strength.`;
 }
 
 async function getLocalTrendAnalysis(entries: any[]): Promise<string> {
@@ -156,180 +194,95 @@ serve(async (req) => {
       );
     }
 
-    // Initialize local AI pipeline if needed
-    if (!openAIApiKey) {
-      await initializeLocalAI();
-    }
+    let result = '';
     
-    // Use local AI if OpenAI key is not available or if API fails
-    const useLocalAI = !openAIApiKey;
-    
-    if (useLocalAI) {
-      console.log('Using local AI with ML models');
-      let result = '';
+    // Use OpenAI if available, otherwise use enhanced local AI
+    if (openAIApiKey) {
+      console.log('Using OpenAI API');
       
-      switch (action) {
-        case 'summarize':
-          result = await getLocalSummary(content);
-          break;
-        case 'detect-mood':
-          result = await getLocalMoodAnalysis(content);
-          break;
-        case 'reflect':
-          result = await getLocalReflection(content);
-          break;
-        case 'trend-analysis':
-          result = await getLocalTrendAnalysis(entries || []);
-          break;
-        default:
-          return new Response(
-            JSON.stringify({ error: 'Invalid action' }), 
-            { 
-              status: 400, 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-            }
-          );
-      }
-      
-      return new Response(
-        JSON.stringify({ result }), 
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openAIApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [
+              {
+                role: 'system',
+                content: getSystemPrompt(action)
+              },
+              {
+                role: 'user',
+                content: action === 'trend-analysis' ? JSON.stringify(entries) : content
+              }
+            ],
+            max_tokens: 150,
+            temperature: 0.7,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`OpenAI API error: ${response.status}`);
         }
-      );
-    }
 
-    let systemPrompt = '';
-    let userPrompt = '';
-
-    switch (action) {
-      case 'summarize':
-        systemPrompt = 'You are a helpful assistant that creates concise, meaningful summaries of diary entries. Keep it under 100 words and capture the main emotions and events.';
-        userPrompt = `Please summarize this diary entry: "${content}"`;
-        break;
-      case 'detect-mood':
-        systemPrompt = 'You are an emotion detection assistant. Analyze the text and return only one of these exact mood values: happy, sad, excited, calm, stressed, neutral. Return only the mood word, nothing else.';
-        userPrompt = `Analyze the mood of this diary entry: "${content}"`;
-        break;
-      case 'reflect':
-        systemPrompt = 'You are a supportive reflection assistant. Provide a brief, encouraging reflection or tip based on the diary entry. Keep it under 150 words and be positive and supportive.';
-        userPrompt = `Provide a supportive reflection for this diary entry: "${content}"`;
-        break;
-      case 'trend-analysis':
-        systemPrompt = 'You are a mood trend analyst. Analyze the recent diary entries and provide insights about mood patterns, trends, and encouraging observations. Keep it under 200 words.';
-        userPrompt = `Analyze these recent diary entries for mood trends: ${JSON.stringify(entries)}`;
-        break;
-      default:
-        return new Response(
-          JSON.stringify({ error: 'Invalid action. Use: summarize, detect-mood, reflect, or trend-analysis' }), 
-          { 
-            status: 400, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        );
-    }
-
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        max_tokens: action === 'detect-mood' ? 10 : 200,
-        temperature: action === 'detect-mood' ? 0.1 : 0.7,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('OpenAI API error:', response.status, errorText);
-      
-      // Fallback to local AI if OpenAI fails
-      console.log('OpenAI failed, falling back to local AI with ML models');
-      await initializeLocalAI();
-      let result = '';
-      
-      switch (action) {
-        case 'summarize':
-          result = await getLocalSummary(content);
-          break;
-        case 'detect-mood':
-          result = await getLocalMoodAnalysis(content);
-          break;
-        case 'reflect':
-          result = await getLocalReflection(content);
-          break;
-        case 'trend-analysis':
-          result = await getLocalTrendAnalysis(entries || []);
-          break;
-        default:
-          result = 'AI analysis temporarily unavailable';
+        const data = await response.json();
+        result = data.choices[0]?.message?.content || 'Unable to analyze content.';
+        
+      } catch (error) {
+        console.error('OpenAI API failed, falling back to local AI:', error);
+        result = await getLocalFallback(action, content, entries);
       }
-      
-      return new Response(
-        JSON.stringify({ result }), 
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
+    } else {
+      console.log('Using enhanced local AI');
+      result = await getLocalFallback(action, content, entries);
     }
-
-    const data = await response.json();
-    const result = data.choices[0].message.content.trim();
 
     return new Response(
       JSON.stringify({ result }), 
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
     console.error('Error in analyze-entry function:', error);
-    
-    // Final fallback to local AI
-    try {
-      const { content, action, entries } = await req.json();
-      let result = '';
-      
-      switch (action) {
-        case 'summarize':
-          result = await getLocalSummary(content || '');
-          break;
-        case 'detect-mood':
-          result = await getLocalMoodAnalysis(content || '');
-          break;
-        case 'reflect':
-          result = await getLocalReflection(content || '');
-          break;
-        case 'trend-analysis':
-          result = await getLocalTrendAnalysis(entries || []);
-          break;
-        default:
-          result = 'Analysis temporarily unavailable';
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }), 
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
-      
-      return new Response(
-        JSON.stringify({ result }), 
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    } catch (fallbackError) {
-      console.error('Fallback also failed:', fallbackError);
-      return new Response(
-        JSON.stringify({ result: 'AI analysis temporarily unavailable' }), 
-        { 
-          status: 200, // Return 200 to prevent client errors
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
+    );
   }
 });
+
+async function getLocalFallback(action: string, content: string, entries?: any[]): Promise<string> {
+  switch (action) {
+    case 'summarize':
+      return await getLocalSummary(content);
+    case 'detect-mood':
+      return await getLocalMoodAnalysis(content);
+    case 'reflect':
+      return await getLocalReflection(content);
+    case 'trend-analysis':
+      return await getLocalTrendAnalysis(entries || []);
+    default:
+      return 'Action not supported.';
+  }
+}
+
+function getSystemPrompt(action: string): string {
+  switch (action) {
+    case 'summarize':
+      return 'You are a helpful assistant that summarizes diary entries. Provide a concise 2-3 sentence summary that captures the main themes, emotions, and key points. Focus on the essence of what the person wrote.';
+    case 'detect-mood':
+      return 'You are a mood detection assistant. Analyze the diary entry and return ONLY one word from these options: happy, sad, excited, calm, stressed, neutral. Choose the mood that best represents the overall emotional tone.';
+    case 'reflect':
+      return 'You are a thoughtful reflection assistant. Provide a gentle, encouraging 2-3 sentence reflection on the diary entry. Focus on acknowledging their feelings, highlighting positive aspects or growth, and offering gentle encouragement.';
+    case 'trend-analysis':
+      return 'You are a trend analysis assistant. Analyze the mood patterns from recent diary entries and provide a 2-3 sentence insight about emotional trends, patterns, or suggestions for well-being.';
+    default:
+      return 'You are a helpful assistant.';
+  }
+}
