@@ -25,7 +25,7 @@ export function ThemeSelector({ currentTheme, onThemeChange }: ThemeSelectorProp
               className="h-auto p-3 flex flex-col items-center space-y-1"
               onClick={() => onThemeChange(theme.value)}
             >
-              <div className={`w-8 h-8 rounded ${theme.bgClass || 'bg-gray-200'} border`} />
+              <div className={`w-8 h-8 rounded ${theme.background} border`} />
               <span className="text-xs">{theme.name}</span>
             </Button>
           ))}

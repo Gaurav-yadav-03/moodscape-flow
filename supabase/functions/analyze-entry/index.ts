@@ -1,7 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-
 function extractKeywords(text: string): string[] {
   const words = text.toLowerCase().split(/\W+/);
   const commonWords = new Set(['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'was', 'are', 'were', 'be', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'can', 'this', 'that', 'these', 'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them', 'my', 'your', 'his', 'her', 'its', 'our', 'their']);
@@ -196,49 +194,8 @@ serve(async (req) => {
 
     let result = '';
     
-    // Use OpenAI if available, otherwise use enhanced local AI
-    if (openAIApiKey) {
-      console.log('Using OpenAI API');
-      
-      try {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openAIApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            messages: [
-              {
-                role: 'system',
-                content: getSystemPrompt(action)
-              },
-              {
-                role: 'user',
-                content: action === 'trend-analysis' ? JSON.stringify(entries) : content
-              }
-            ],
-            max_tokens: 150,
-            temperature: 0.7,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`OpenAI API error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        result = data.choices[0]?.message?.content || 'Unable to analyze content.';
-        
-      } catch (error) {
-        console.error('OpenAI API failed, falling back to local AI:', error);
-        result = await getLocalFallback(action, content, entries);
-      }
-    } else {
-      console.log('Using enhanced local AI');
-      result = await getLocalFallback(action, content, entries);
-    }
+    console.log('Using enhanced local AI');
+    result = await getLocalFallback(action, content, entries);
 
     return new Response(
       JSON.stringify({ result }), 
@@ -269,20 +226,5 @@ async function getLocalFallback(action: string, content: string, entries?: any[]
       return await getLocalTrendAnalysis(entries || []);
     default:
       return 'Action not supported.';
-  }
-}
-
-function getSystemPrompt(action: string): string {
-  switch (action) {
-    case 'summarize':
-      return 'You are a helpful assistant that summarizes diary entries. Provide a concise 2-3 sentence summary that captures the main themes, emotions, and key points. Focus on the essence of what the person wrote.';
-    case 'detect-mood':
-      return 'You are a mood detection assistant. Analyze the diary entry and return ONLY one word from these options: happy, sad, excited, calm, stressed, neutral. Choose the mood that best represents the overall emotional tone.';
-    case 'reflect':
-      return 'You are a thoughtful reflection assistant. Provide a gentle, encouraging 2-3 sentence reflection on the diary entry. Focus on acknowledging their feelings, highlighting positive aspects or growth, and offering gentle encouragement.';
-    case 'trend-analysis':
-      return 'You are a trend analysis assistant. Analyze the mood patterns from recent diary entries and provide a 2-3 sentence insight about emotional trends, patterns, or suggestions for well-being.';
-    default:
-      return 'You are a helpful assistant.';
   }
 }
