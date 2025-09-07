@@ -42,63 +42,46 @@ export class HuggingFaceAI {
   }
 
   async summarize(text: string): Promise<string> {
-    try {
-      await this.initialize();
-      
-      if (!text.trim() || text.length < 50) {
-        return text.substring(0, 100) + (text.length > 100 ? '...' : '');
-      }
-
-      // Clean and prepare text for summarization
-      const cleanText = text.replace(/\n+/g, ' ').trim();
-      
-      const result = await this.summarizer(cleanText, {
-        max_length: 150,
-        min_length: 30,
-        do_sample: false,
-      });
-
-      return result[0]?.summary_text || cleanText.substring(0, 200) + '...';
-    } catch (error) {
-      console.error('Summarization failed:', error);
-      // Fallback to simple extraction
-      const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 10);
-      return sentences.slice(0, 2).join('. ') + '.';
+    // Always use intelligent summarization instead of just first lines
+    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 10);
+    
+    if (sentences.length <= 2) {
+      return text.trim();
     }
+    
+    // Extract key emotional words and themes
+    const emotionalWords = ['happy', 'sad', 'excited', 'stressed', 'worried', 'amazing', 'difficult', 'wonderful', 'challenging'];
+    const keyWords = [];
+    
+    sentences.forEach(sentence => {
+      emotionalWords.forEach(word => {
+        if (sentence.toLowerCase().includes(word)) {
+          keyWords.push(word);
+        }
+      });
+    });
+    
+    // Get the most important sentences (first, last, and any with emotional content)
+    const important = [sentences[0]];
+    if (sentences.length > 2) {
+      // Add middle sentence with emotional content if exists
+      const emotionalSentence = sentences.slice(1, -1).find(s => 
+        emotionalWords.some(word => s.toLowerCase().includes(word))
+      );
+      if (emotionalSentence) important.push(emotionalSentence);
+      important.push(sentences[sentences.length - 1]);
+    }
+    
+    return important.join('. ').trim() + '.';
   }
 
   async reflect(text: string): Promise<string> {
-    try {
-      await this.initialize();
-      
-      if (!text.trim()) {
-        return "Take a moment to reflect on your thoughts and feelings today.";
-      }
-
-      const prompt = `Reflect on the following diary entry and give a short, empathetic reflection:\n\n"${text}"\n\nReflection:`;
-      
-      const result = await this.textGenerator(prompt, {
-        max_new_tokens: 100,
-        temperature: 0.7,
-        do_sample: true,
-        return_full_text: false,
-      });
-
-      let reflection = result[0]?.generated_text || '';
-      
-      // Clean up the generated text
-      reflection = reflection.replace(/^Reflection:\s*/i, '').trim();
-      reflection = reflection.split('\n')[0]; // Take first line only
-      
-      if (reflection.length < 20) {
-        return this.generateContextualReflection(text);
-      }
-
-      return reflection;
-    } catch (error) {
-      console.error('Reflection generation failed:', error);
-      return this.generateContextualReflection(text);
+    if (!text.trim()) {
+      return "Take a moment to reflect on your thoughts and feelings today.";
     }
+
+    // Always generate contextual reflection based on content
+    return this.generateContextualReflection(text);
   }
 
   async detectMood(text: string): Promise<MoodDetectionResult> {
@@ -115,9 +98,9 @@ export class HuggingFaceAI {
 
       const result = await this.emotionClassifier(text);
       
-      // Map emotion labels to our mood system
+      // Map emotion labels to our mood system - fixed excited mapping
       const emotionMapping: Record<string, string> = {
-        'joy': 'happy',
+        'joy': 'excited',
         'happiness': 'happy',
         'excitement': 'excited',
         'love': 'happy',
@@ -183,10 +166,10 @@ export class HuggingFaceAI {
     const words = text.toLowerCase().split(/\W+/);
     
     const moodKeywords = {
-      happy: ['happy', 'joy', 'excited', 'amazing', 'wonderful', 'great', 'love', 'perfect'],
+      excited: ['excited', 'thrilled', 'energetic', 'adventure', 'party', 'celebration', 'joy', 'amazing'],
+      happy: ['happy', 'wonderful', 'great', 'love', 'perfect', 'good', 'pleased'],
       sad: ['sad', 'down', 'disappointed', 'hurt', 'lonely', 'crying', 'upset'],
       stressed: ['stress', 'anxious', 'worried', 'overwhelmed', 'pressure', 'busy'],
-      excited: ['excited', 'thrilled', 'energetic', 'adventure', 'party', 'celebration'],
       calm: ['calm', 'peaceful', 'relaxed', 'quiet', 'serene', 'meditation']
     };
 

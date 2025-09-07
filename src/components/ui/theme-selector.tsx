@@ -12,6 +12,11 @@ interface ThemeSelectorProps {
 }
 
 export function ThemeSelector({ currentTheme, onThemeChange }: ThemeSelectorProps) {
+  const handleThemeClick = (themeValue: string) => {
+    console.log('Theme clicked:', themeValue);
+    onThemeChange(themeValue);
+  };
+
   return (
     <Card className="p-4">
       <div className="space-y-3">
@@ -23,10 +28,11 @@ export function ThemeSelector({ currentTheme, onThemeChange }: ThemeSelectorProp
               key={theme.value}
               variant={currentTheme === theme.value ? "default" : "outline"}
               className="h-auto p-3 flex flex-col items-center space-y-1"
-              onClick={() => onThemeChange(theme.value)}
+              onClick={() => handleThemeClick(theme.value)}
             >
               <div className={`w-8 h-8 rounded ${theme.background} border`} />
               <span className="text-xs">{theme.name}</span>
+              {currentTheme === theme.value && <Check className="h-3 w-3" />}
             </Button>
           ))}
         </div>

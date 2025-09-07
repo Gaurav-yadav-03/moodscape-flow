@@ -40,6 +40,7 @@ export function useEntries() {
 
   const createEntry = async (entryData: Omit<Entry, 'id' | 'user_id' | 'created_at' | 'updated_at'>, date?: string) => {
     try {
+      // Ensure consistent date format (UTC date only, no timezone issues)
       const targetDate = date || new Date().toISOString().split('T')[0];
       
       // Check if an entry already exists for the target date

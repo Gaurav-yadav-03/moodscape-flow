@@ -261,8 +261,10 @@ export function DiaryEditor({ entryId, selectedDate, onBack }: DiaryEditorProps)
   };
 
   const handleDateChange = (date: string) => {
-    setCurrentDate(date);
-    setEntry(prev => ({ ...prev, date }));
+    // Ensure proper date format and UTC handling
+    const utcDate = new Date(date + 'T00:00:00.000Z').toISOString().split('T')[0];
+    setCurrentDate(utcDate);
+    setEntry(prev => ({ ...prev, date: utcDate }));
   };
 
   const handleAIMoodDetection = async () => {
