@@ -15,6 +15,17 @@ export function ThemeSelector({ currentTheme, onThemeChange }: ThemeSelectorProp
   const handleThemeClick = (themeValue: string) => {
     console.log('Theme clicked:', themeValue);
     onThemeChange(themeValue);
+    
+    // Force immediate visual update
+    setTimeout(() => {
+      const writingArea = document.querySelector('.writing-area') as HTMLElement;
+      if (writingArea) {
+        const theme = THEME_OPTIONS.find(t => t.value === themeValue);
+        if (theme) {
+          writingArea.className = 'writing-area p-6 min-h-[600px] rounded-lg transition-all duration-300 ' + theme.background;
+        }
+      }
+    }, 50);
   };
 
   return (

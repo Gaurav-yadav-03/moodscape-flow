@@ -40,8 +40,9 @@ export function useEntries() {
 
   const createEntry = async (entryData: Omit<Entry, 'id' | 'user_id' | 'created_at' | 'updated_at'>, date?: string) => {
     try {
-      // Ensure consistent date format (UTC date only, no timezone issues)
-      const targetDate = date || new Date().toISOString().split('T')[0];
+      // Fix timezone offset - get local date properly
+      const now = new Date();
+      const targetDate = date || new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
       
       // Check if an entry already exists for the target date
       const { data: existingEntry } = await supabase
@@ -93,7 +94,8 @@ export function useEntries() {
   };
 
   const getTodaysEntry = async () => {
-    const todaysDate = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const todaysDate = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
     return getEntryByDate(todaysDate);
   };
 
