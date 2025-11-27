@@ -21,7 +21,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { WritingStats } from './WritingStats';
 import { FloatingToolbar } from './FloatingToolbar';
-import { AutoSaveIndicator } from './AutoSaveIndicator';
+import { AutoSaveStatus } from './AutoSaveStatus';
 import { AIPanel } from './AIPanel';
 import { QuickNotesPanel } from './QuickNotesPanel';
 import { SettingsDropdown } from './SettingsDropdown';
@@ -152,7 +152,7 @@ export function DiaryEditor({ entryId, onBack }: DiaryEditorProps) {
                 </Popover>
               </div>
               <div className="flex items-center gap-4">
-                <AutoSaveIndicator status={saveStatus} lastSaved={lastSaved} />
+                <AutoSaveStatus status={saveStatus} lastSaved={lastSaved} />
                 <SettingsDropdown fontFamily={fontFamily} onFontChange={setFontFamily} theme={theme} onThemeChange={setTheme} backgroundImage={backgroundImage} onBackgroundChange={setBackgroundImage} backgroundOpacity={backgroundOpacity} onOpacityChange={setBackgroundOpacity} />
                 <Button variant="ghost" size="sm" onClick={() => setShowAIPanel(!showAIPanel)} className={cn("h-8 w-8 p-0", showAIPanel ? "text-primary bg-primary/10" : "text-gray-500 hover:text-primary hover:bg-primary/5")}>
                   {showAIPanel ? <PanelRightClose className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
