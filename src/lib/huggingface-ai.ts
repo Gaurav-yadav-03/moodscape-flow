@@ -21,7 +21,7 @@ export class HuggingFaceAI {
 
     try {
       console.log('Initializing HuggingFace AI models...');
-      
+
       // Initialize models in parallel
       const [summarizer, emotionClassifier, textGenerator] = await Promise.all([
         pipeline('summarization', 'facebook/bart-large-cnn', { device: 'webgpu' }),
@@ -33,7 +33,7 @@ export class HuggingFaceAI {
       this.emotionClassifier = emotionClassifier;
       this.textGenerator = textGenerator;
       this.isInitialized = true;
-      
+
       console.log('HuggingFace AI models initialized successfully');
     } catch (error) {
       console.error('Failed to initialize HuggingFace models:', error);
@@ -44,7 +44,7 @@ export class HuggingFaceAI {
   async summarize(text: string): Promise<string> {
     try {
       await this.initialize();
-      
+
       if (!text.trim() || text.length < 50) {
         return text.trim();
       }
@@ -55,32 +55,32 @@ export class HuggingFaceAI {
         min_length: 30,
         do_sample: false
       });
-      
+
       return result[0].summary_text;
     } catch (error) {
       console.error('Summarization failed, using fallback:', error);
-      
+
       // Better fallback that extracts key themes and paraphrases
       const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 10);
       if (sentences.length <= 2) return text.trim();
-      
+
       // Extract themes and create a more intelligent summary
       const themes = this.extractThemes(text);
       const emotions = this.extractEmotions(text);
-      
-      // Create a meaningful summary using different words
+
+      // Create a factual summary based on content analysis
       if (themes.work && emotions.positive) {
-        return `Today brought productive work experiences with a positive outlook. The challenges faced were met with determination and good energy.`;
+        return `The entry describes productive work activities and successful outcomes.`;
       } else if (themes.relationships && emotions.mixed) {
-        return `Meaningful connections and personal relationships took center stage, bringing both joy and contemplation about important bonds.`;
+        return `The text details interactions with others and the complexity of these relationships.`;
       } else if (emotions.stressed) {
-        return `The day presented various challenges that required resilience and careful navigation through complex situations.`;
+        return `The entry outlines specific challenges faced and the difficulties encountered.`;
       } else if (emotions.excited) {
-        return `An energetic and enthusiastic day filled with engaging activities and positive momentum moving forward.`;
+        return `The writing lists energetic activities and positive forward momentum.`;
       }
-      
-      // Generic but better fallback
-      return `Today's experiences involved ${themes.main || 'personal growth'} with ${emotions.dominant || 'thoughtful'} reflections on life's journey.`;
+
+      // Generic factual fallback
+      return `The entry discusses ${themes.main || 'personal experiences'} and records observations about these events.`;
     }
   }
 
@@ -92,9 +92,9 @@ export class HuggingFaceAI {
       health: /health|exercise|tired|energy|sleep|medical/.test(words),
       travel: /travel|trip|vacation|journey|visit|explore/.test(words),
       learning: /learn|study|read|discover|understand|knowledge/.test(words),
-      main: words.includes('work') ? 'professional development' : 
-            words.includes('friend') ? 'social connections' :
-            words.includes('family') ? 'family bonds' : 'personal experiences'
+      main: words.includes('work') ? 'professional development' :
+        words.includes('friend') ? 'social connections' :
+          words.includes('family') ? 'family bonds' : 'personal experiences'
     };
   }
 
@@ -106,8 +106,8 @@ export class HuggingFaceAI {
       excited: /excited|thrilled|energetic|amazing|awesome/.test(words),
       mixed: /but|however|although|mixed|complex/.test(words),
       dominant: words.includes('stress') ? 'challenging' :
-               words.includes('excited') ? 'enthusiastic' :
-               words.includes('happy') ? 'uplifting' : 'reflective'
+        words.includes('excited') ? 'enthusiastic' :
+          words.includes('happy') ? 'uplifting' : 'reflective'
     };
   }
 
@@ -123,7 +123,7 @@ export class HuggingFaceAI {
   async detectMood(text: string): Promise<MoodDetectionResult> {
     try {
       await this.initialize();
-      
+
       if (!text.trim()) {
         return {
           emotion: 'neutral',
@@ -133,7 +133,7 @@ export class HuggingFaceAI {
       }
 
       const result = await this.emotionClassifier(text);
-      
+
       // Map emotion labels to our mood system - fixed excited mapping
       const emotionMapping: Record<string, string> = {
         'joy': 'excited',
@@ -152,7 +152,7 @@ export class HuggingFaceAI {
 
       const topEmotion = result[0];
       const mappedEmotion = emotionMapping[topEmotion.label.toLowerCase()] || 'neutral';
-      
+
       // Convert all emotions to our format
       const emotions = result.map((emotion: any) => ({
         emotion: emotionMapping[emotion.label.toLowerCase()] || emotion.label,
@@ -173,34 +173,54 @@ export class HuggingFaceAI {
   private generateContextualReflection(text: string): string {
     const words = text.toLowerCase().split(/\W+/);
     const wordCount = text.split(' ').length;
-    
-    // Context-aware reflection templates
-    if (words.some(w => ['work', 'job', 'meeting', 'deadline', 'project'].includes(w))) {
-      return "Work challenges are opportunities for growth. Your dedication shows in your writing.";
+
+    // Context-aware reflection templates - Strictly Analytical & Content-Based
+    if (words.some(w => ['work', 'job', 'meeting', 'deadline', 'project', 'career'].includes(w))) {
+      const workReflections = [
+        "The entry centers on professional responsibilities and the specific challenges encountered in the work environment.",
+        "This passage highlights a focus on career-related tasks and the outcomes of recent professional efforts.",
+        "The writing describes a sequence of work-related events and the immediate reactions to professional demands."
+      ];
+      return workReflections[Math.floor(Math.random() * workReflections.length)];
     }
-    
-    if (words.some(w => ['family', 'friend', 'relationship', 'love'].includes(w))) {
-      return "The connections you write about show how much you value relationships. That's beautiful.";
+
+    if (words.some(w => ['family', 'friend', 'relationship', 'love', 'partner', 'connect'].includes(w))) {
+      const relReflections = [
+        "The text focuses on interpersonal dynamics and specific interactions with close connections.",
+        "This entry details recent social exchanges and the specific nature of current relationships.",
+        "The content describes the state of personal bonds and the events affecting them."
+      ];
+      return relReflections[Math.floor(Math.random() * relReflections.length)];
     }
-    
-    if (words.some(w => ['stress', 'worried', 'anxious', 'difficult'].includes(w))) {
-      return "It takes courage to acknowledge difficult feelings. You're processing them thoughtfully.";
+
+    if (words.some(w => ['stress', 'worried', 'anxious', 'difficult', 'hard', 'struggle'].includes(w))) {
+      const stressReflections = [
+        "The entry describes a situation characterized by high pressure and the specific difficulties being faced.",
+        "The tone indicates a response to challenging circumstances and details the stressors involved.",
+        "The writing outlines current obstacles and the immediate impact of these difficulties."
+      ];
+      return stressReflections[Math.floor(Math.random() * stressReflections.length)];
     }
-    
-    if (words.some(w => ['happy', 'excited', 'amazing', 'wonderful', 'great'].includes(w))) {
-      return "Your positive energy radiates through your words. These moments of joy deserve celebration.";
+
+    if (words.some(w => ['happy', 'excited', 'amazing', 'wonderful', 'great', 'joy', 'grateful'].includes(w))) {
+      const joyReflections = [
+        "The entry records positive events and the specific favorable outcomes experienced today.",
+        "The text describes a series of successful or enjoyable moments and the resulting satisfaction.",
+        "The content highlights specific achievements or pleasant occurrences and the immediate positive reaction."
+      ];
+      return joyReflections[Math.floor(Math.random() * joyReflections.length)];
     }
-    
+
     if (wordCount > 150) {
-      return "Your detailed reflection shows deep self-awareness. This kind of introspection is powerful.";
+      return "The entry provides a detailed account of recent events, elaborating on specific thoughts and the sequence of occurrences.";
     }
-    
-    return "Your honest expression of thoughts and feelings shows emotional intelligence and growth.";
+
+    return "The entry records current thoughts and observations regarding recent experiences.";
   }
 
   private fallbackMoodDetection(text: string): MoodDetectionResult {
     const words = text.toLowerCase().split(/\W+/);
-    
+
     const moodKeywords = {
       excited: ['excited', 'thrilled', 'energetic', 'adventure', 'party', 'celebration', 'joy', 'amazing'],
       happy: ['happy', 'wonderful', 'great', 'love', 'perfect', 'good', 'pleased'],
@@ -210,7 +230,7 @@ export class HuggingFaceAI {
     };
 
     const scores: Record<string, number> = {};
-    
+
     Object.entries(moodKeywords).forEach(([mood, keywords]) => {
       scores[mood] = keywords.reduce((count, keyword) => {
         return count + words.filter(word => word.includes(keyword)).length;
@@ -219,7 +239,7 @@ export class HuggingFaceAI {
 
     const totalWords = words.length;
     const dominantMood = Object.entries(scores)
-      .sort(([,a], [,b]) => b - a)[0];
+      .sort(([, a], [, b]) => b - a)[0];
 
     const emotion = dominantMood?.[0] || 'neutral';
     const confidence = Math.min((dominantMood?.[1] || 0) / Math.max(totalWords / 10, 1), 1);

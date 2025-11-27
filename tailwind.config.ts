@@ -55,12 +55,12 @@ export default {
 					foreground: 'hsl(var(--card-foreground))'
 				},
 				mood: {
-					happy: 'hsl(var(--mood-happy))',
-					sad: 'hsl(var(--mood-sad))',
-					excited: 'hsl(var(--mood-excited))',
-					calm: 'hsl(var(--mood-calm))',
-					stressed: 'hsl(var(--mood-stressed))',
-					neutral: 'hsl(var(--mood-neutral))'
+					happy: '#FFD93D',    // Sunny Yellow
+					sad: '#6C5CE7',      // Deep Periwinkle
+					excited: '#FF7675',  // Soft Coral
+					calm: '#00CEC9',     // Teal
+					stressed: '#FF6B6B', // Red
+					neutral: '#A29BFE'   // Lavender
 				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',

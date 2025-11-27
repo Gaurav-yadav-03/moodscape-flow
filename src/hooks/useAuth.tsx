@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (event === 'SIGNED_IN') {
           toast({
             title: "Welcome back!",
-            description: "You've successfully signed in to Journal+",
+            description: "You've successfully signed in to MoodScape",
           });
         } else if (event === 'SIGNED_OUT') {
           toast({
@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, displayName?: string) => {
     const redirectUrl = `${window.location.origin}/`;
-    
+
     const { error } = await supabase.auth.signUp({
       email,
       password,

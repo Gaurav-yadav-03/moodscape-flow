@@ -28,7 +28,7 @@ const Index = () => {
           <div className="w-16 h-16 bg-gradient-warm rounded-2xl flex items-center justify-center animate-pulse-soft mx-auto">
             <span className="text-white font-bold text-xl">J+</span>
           </div>
-          <p className="text-muted-foreground">Loading Journal+...</p>
+          <p className="text-muted-foreground">Loading MoodScape...</p>
         </div>
       </div>
     );

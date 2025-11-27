@@ -1,81 +1,51 @@
-export interface Profile {
-  id: string;
-  user_id: string;
-  email: string | null;
-  display_name: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface Entry {
   id: string;
   user_id: string;
-  date: string;
-  title: string | null;
+  title: string;
   content: string;
   mood: string;
-  theme: string;
-  font_style: string;
-  deleted_at?: string;
+  date: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string | null;
   entry_theme?: string;
   entry_font?: string;
-  customBackground?: string;
-  stickyNotes?: string;
+  images?: string[]; // Added images array support
+}
+
+export interface UserSettings {
+  id: string;
+  user_id: string;
+  theme_preference: string;
+  font_preference: string;
   created_at: string;
   updated_at: string;
 }
 
-export interface MoodOption {
-  value: string;
-  emoji: string;
-  label: string;
-  color: string;
-}
-
-export interface ThemeOption {
-  value: string;
-  name: string;
-  background: string;
-  text: string;
-}
-
-export interface FontOption {
-  value: string;
-  name: string;
-  className: string;
-}
-
-export const MOOD_OPTIONS: MoodOption[] = [
-  { value: 'happy', emoji: '😊', label: 'Happy', color: 'mood-happy' },
-  { value: 'excited', emoji: '🤩', label: 'Excited', color: 'mood-excited' },
-  { value: 'calm', emoji: '😌', label: 'Calm', color: 'mood-calm' },
-  { value: 'neutral', emoji: '😐', label: 'Neutral', color: 'mood-neutral' },
-  { value: 'stressed', emoji: '😰', label: 'Stressed', color: 'mood-stressed' },
-  { value: 'sad', emoji: '😢', label: 'Sad', color: 'mood-sad' }
+export const MOOD_OPTIONS = [
+  { value: 'happy', label: 'Happy', emoji: '😊', color: 'bg-green-500' },
+  { value: 'sad', label: 'Sad', emoji: '😔', color: 'bg-blue-500' },
+  { value: 'excited', label: 'Excited', emoji: '🤩', color: 'bg-yellow-500' },
+  { value: 'calm', label: 'Calm', emoji: '😌', color: 'bg-teal-500' },
+  { value: 'stressed', label: 'Stressed', emoji: '😫', color: 'bg-red-500' },
+  { value: 'neutral', label: 'Neutral', emoji: '😐', color: 'bg-gray-500' },
 ];
 
-// Helper function to get today's date in YYYY-MM-DD format
-export const getTodaysDate = (): string => {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const day = String(today.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+export const THEME_OPTIONS = [
+  { value: 'clean', label: 'Clean White', class: 'theme-clean' },
+  { value: 'minimal', label: 'Soft Gray', class: 'theme-minimal' },
+  { value: 'dark', label: 'Midnight', class: 'theme-dark' },
+  { value: 'vintage', label: 'Vintage Paper', class: 'theme-vintage' },
+  { value: 'nature', label: 'Forest Green', class: 'theme-nature' },
+  { value: 'ocean', label: 'Ocean Blue', class: 'theme-ocean' },
+];
+
+export const FONT_OPTIONS = [
+  { value: 'sans', label: 'Modern Sans', class: 'font-sans' },
+  { value: 'serif', label: 'Classic Serif', class: 'font-serif' },
+  { value: 'mono', label: 'Typewriter', class: 'font-mono' },
+];
+
+export const getTodaysDate = () => {
+  return new Date().toISOString().split('T')[0];
 };
-
-// Helper function to check if an entry can be created for a specific date
-export const canCreateEntryForDate = (date: string): boolean => {
-  return date === getTodaysDate();
-};
-
-export const THEME_OPTIONS: ThemeOption[] = [
-  { value: 'default', name: 'Default', background: 'bg-background', text: 'text-foreground' },
-  { value: 'sunset', name: 'Sunset', background: 'bg-gradient-sunset', text: 'text-white' },
-  { value: 'warm', name: 'Warm', background: 'bg-gradient-warm', text: 'text-white' }
-];
-
-export const FONT_OPTIONS: FontOption[] = [
-  { value: 'default', name: 'Inter (Default)', className: 'font-inter' },
-  { value: 'serif', name: 'Playfair (Elegant)', className: 'font-playfair' },
-  { value: 'mono', name: 'Mono (Focus)', className: 'font-mono' }
-];

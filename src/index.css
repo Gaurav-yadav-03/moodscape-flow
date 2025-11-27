@@ -2,295 +2,94 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Journal+ Design System - Warm, Modern, GenZ-focused */
-
 @layer base {
   :root {
-    /* Core brand colors - warm purples and pinks */
-    --background: 28 28% 98%;
-    --foreground: 260 15% 15%;
+    /* Base Colors - Calm & Airy */
+    --background: 40 20% 97%;
+    /* Warm Cream */
+    --foreground: 240 10% 3.9%;
 
     --card: 0 0% 100%;
-    --card-foreground: 260 15% 15%;
+    --card-foreground: 240 10% 3.9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 260 15% 15%;
+    --popover-foreground: 240 10% 3.9%;
 
-    /* Primary: Warm purple */
-    --primary: 280 65% 60%;
-    --primary-foreground: 0 0% 100%;
-    --primary-light: 285 70% 75%;
-    --primary-dark: 275 60% 45%;
+    /* Primary - Soft Sage/Eucalyptus */
+    --primary: 146 30% 50%;
+    --primary-foreground: 355.7 100% 97.3%;
+    --primary-light: 146 40% 70%;
+    --primary-dark: 146 40% 30%;
 
-    /* Secondary: Soft pink */
-    --secondary: 330 55% 85%;
-    --secondary-foreground: 280 65% 20%;
+    /* Secondary - Muted Lavender */
+    --secondary: 260 20% 90%;
+    --secondary-foreground: 240 5.9% 10%;
 
-    /* Muted: Warm neutrals */
-    --muted: 25 25% 95%;
-    --muted-foreground: 260 10% 45%;
+    /* Muted - Warm Grey */
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
 
-    /* Accent: Coral/peach */
-    --accent: 15 85% 75%;
-    --accent-foreground: 280 65% 20%;
+    /* Accent - Soft Peach */
+    --accent: 20 50% 90%;
+    --accent-foreground: 240 5.9% 10%;
 
-    --destructive: 0 75% 60%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 25 15% 90%;
-    --input: 25 15% 95%;
-    --ring: 280 65% 60%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 146 30% 50%;
 
     --radius: 0.75rem;
 
-    /* Gradients for beautiful backgrounds */
-    --gradient-warm: linear-gradient(135deg, hsl(280 65% 60%) 0%, hsl(15 85% 75%) 100%);
-    --gradient-sunset: linear-gradient(135deg, hsl(330 55% 85%) 0%, hsl(280 65% 75%) 50%, hsl(240 65% 70%) 100%);
-    --gradient-soft: linear-gradient(180deg, hsl(28 28% 98%) 0%, hsl(25 25% 95%) 100%);
-    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(25 25% 98%) 100%);
+    /* Gradients */
+    --gradient-warm: linear-gradient(135deg, hsl(40 20% 97%) 0%, hsl(20 50% 95%) 100%);
+    --gradient-soft: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(40 20% 98%) 100%);
+    --gradient-card: linear-gradient(145deg, #ffffff 0%, #fcfcfc 100%);
 
-    /* Mood colors for diary entries */
-    --mood-happy: 120 65% 60%;
-    --mood-sad: 240 65% 60%;
-    --mood-excited: 45 90% 60%;
-    --mood-calm: 180 40% 60%;
-    --mood-stressed: 0 65% 60%;
-    --mood-neutral: 0 0% 60%;
-
-    /* Shadows for depth */
-    --shadow-soft: 0 4px 20px -4px hsl(280 65% 60% / 0.15);
-    --shadow-medium: 0 8px 30px -8px hsl(280 65% 60% / 0.2);
-    --shadow-strong: 0 12px 40px -10px hsl(280 65% 60% / 0.25);
-
-    /* Animation timing */
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-spring: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    /* Shadows */
+    --shadow-soft: 0 2px 15px -3px rgba(0, 0, 0, 0.05);
+    --shadow-medium: 0 10px 30px -5px rgba(0, 0, 0, 0.08);
   }
 
   .dark {
-    /* Dark mode with warm tones */
-    --background: 280 15% 8%;
-    --foreground: 280 5% 90%;
+    /* Dark Mode - Deep & Restful */
+    --background: 240 10% 10%;
+    /* Dark Charcoal */
+    --foreground: 0 0% 98%;
 
-    --card: 280 15% 12%;
-    --card-foreground: 280 5% 90%;
+    --card: 240 10% 12%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 280 15% 12%;
-    --popover-foreground: 280 5% 90%;
+    --popover: 240 10% 12%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 285 70% 75%;
-    --primary-foreground: 280 15% 8%;
+    /* Primary - Muted Mint */
+    --primary: 146 30% 60%;
+    --primary-foreground: 240 5.9% 10%;
+    --primary-light: 146 30% 70%;
+    --primary-dark: 146 30% 40%;
 
-    --secondary: 280 15% 20%;
-    --secondary-foreground: 280 5% 90%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 280 15% 15%;
-    --muted-foreground: 280 5% 60%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
 
-    --accent: 15 85% 65%;
-    --accent-foreground: 280 15% 8%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
 
-    --destructive: 0 75% 60%;
-    --destructive-foreground: 280 5% 90%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 280 15% 20%;
-    --input: 280 15% 15%;
-    --ring: 285 70% 75%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 146 30% 60%;
 
-    /* Dark mode gradients */
-    --gradient-warm: linear-gradient(135deg, hsl(285 70% 75%) 0%, hsl(15 85% 65%) 100%);
-    --gradient-sunset: linear-gradient(135deg, hsl(330 55% 65%) 0%, hsl(285 70% 65%) 50%, hsl(240 65% 60%) 100%);
-    --gradient-soft: linear-gradient(180deg, hsl(280 15% 8%) 0%, hsl(280 15% 12%) 100%);
-    --gradient-card: linear-gradient(145deg, hsl(280 15% 12%) 0%, hsl(280 15% 15%) 100%);
-  }
-}
-
-@layer components {
-  /* Custom component styles using design system */
-  .journal-card {
-    @apply bg-card border border-border rounded-xl p-6 shadow-soft backdrop-blur-sm;
-    background: var(--gradient-card);
-    box-shadow: var(--shadow-soft);
-    transition: var(--transition-smooth);
-  }
-
-  .journal-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-medium);
-  }
-
-  .gradient-bg {
-    background: var(--gradient-soft);
-  }
-
-  .gradient-warm {
-    background: var(--gradient-warm);
-  }
-
-  .gradient-sunset {
-    background: var(--gradient-sunset);
-  }
-
-  /* Theme styles for writing area */
-  .theme-clean {
-    @apply bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100;
-  }
-
-  .theme-clean textarea,
-  .theme-clean input {
-    @apply bg-transparent border-gray-200 dark:border-gray-700 focus:border-primary;
-  }
-
-  .theme-minimal {
-    @apply bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200;
-  }
-
-  .theme-minimal textarea,
-  .theme-minimal input {
-    @apply bg-gray-100/50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600;
-  }
-
-  .theme-dark {
-    @apply bg-gray-900 dark:bg-black text-gray-100 dark:text-white;
-  }
-
-  .theme-dark textarea,
-  .theme-dark input {
-    @apply bg-gray-800/50 dark:bg-gray-900/50 border-gray-600 dark:border-gray-500 text-gray-100;
-  }
-
-  .theme-vintage {
-    @apply bg-amber-50 dark:bg-amber-900/20 text-amber-900 dark:text-amber-100;
-  }
-
-  .theme-vintage textarea,
-  .theme-vintage input {
-    @apply bg-amber-100/30 dark:bg-amber-800/30 border-amber-300 dark:border-amber-700;
-  }
-
-  .theme-nature {
-    @apply bg-green-50 dark:bg-green-900/20 text-green-900 dark:text-green-100;
-  }
-
-  .theme-nature textarea,
-  .theme-nature input {
-    @apply bg-green-100/30 dark:bg-green-800/30 border-green-300 dark:border-green-700;
-  }
-
-  .theme-ocean {
-    @apply bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100;
-  }
-
-  .theme-ocean textarea,
-  .theme-ocean input {
-    @apply bg-blue-100/30 dark:bg-blue-800/30 border-blue-300 dark:border-blue-700;
-  }
-
-  .mood-happy {
-    @apply bg-[hsl(var(--mood-happy))] text-white;
-  }
-
-  .mood-sad {
-    @apply bg-[hsl(var(--mood-sad))] text-white;
-  }
-
-  .mood-excited {
-    @apply bg-[hsl(var(--mood-excited))] text-white;
-  }
-
-  .mood-calm {
-    @apply bg-[hsl(var(--mood-calm))] text-white;
-  }
-
-  .mood-stressed {
-    @apply bg-[hsl(var(--mood-stressed))] text-white;
-  }
-
-  .mood-neutral {
-    @apply bg-[hsl(var(--mood-neutral))] text-white;
-  }
-
-  .animate-float {
-    animation: float 3s ease-in-out infinite;
-  }
-
-  .animate-pulse-soft {
-    animation: pulse-soft 2s ease-in-out infinite;
-  }
-
-  .glass-effect {
-    @apply bg-white/20 backdrop-blur-md border border-white/30;
-  }
-}
-
-@layer utilities {
-  .transition-smooth {
-    transition: var(--transition-smooth);
-  }
-
-  .transition-spring {
-    transition: var(--transition-spring);
-  }
-
-  .shadow-soft {
-    box-shadow: var(--shadow-soft);
-  }
-
-  .shadow-medium {
-    box-shadow: var(--shadow-medium);
-  }
-
-  .shadow-strong {
-    box-shadow: var(--shadow-strong);
-  }
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-@keyframes pulse-soft {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -200px 0;
-  }
-  100% {
-    background-position: calc(200px + 100%) 0;
-  }
-}
-
-@keyframes slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes scale-in {
-  from {
-    opacity: 0;
-    transform: scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
+    /* Dark Gradients */
+    --gradient-warm: linear-gradient(135deg, hsl(240 10% 12%) 0%, hsl(240 10% 15%) 100%);
+    --gradient-soft: linear-gradient(180deg, hsl(240 10% 10%) 0%, hsl(240 10% 12%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(240 10% 12%) 0%, hsl(240 10% 14%) 100%);
   }
 }
 
@@ -301,39 +100,53 @@
 
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  .journal-card {
+    @apply bg-card border border-border/50 rounded-xl p-6 shadow-sm transition-all duration-300;
+    background: var(--gradient-card);
   }
 
-  /* Mood-specific background colors */
-  .bg-mood-happy {
-    background: hsl(45 95% 70%);
-  }
-  
-  .bg-mood-excited {
-    background: hsl(15 85% 75%);
-  }
-  
-  .bg-mood-calm {
-    background: hsl(195 65% 75%);
-  }
-  
-  .bg-mood-neutral {
-    background: hsl(40 25% 75%);
-  }
-  
-  .bg-mood-stressed {
-    background: hsl(0 75% 75%);
-  }
-  
-  .bg-mood-sad {
-    background: hsl(220 65% 75%);
+  .journal-card:hover {
+    @apply shadow-md translate-y-[-2px];
   }
 
-  /* Theme backgrounds */
-  .bg-gradient-sunset {
-    background: linear-gradient(135deg, hsl(45 95% 70%) 0%, hsl(15 85% 75%) 100%);
+  /* Minimalist Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
   }
-  
-  .bg-gradient-warm {
-    background: linear-gradient(135deg, hsl(330 55% 85%) 0%, hsl(280 65% 75%) 100%);
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #e5e7eb;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #d1d5db;
+  }
+
+  /* Cursor Glow Effect */
+  .cursor-glow {
+    caret-color: hsl(var(--primary));
+    animation: cursor-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes cursor-pulse {
+
+    0%,
+    100% {
+      filter: drop-shadow(0 0 2px hsl(var(--primary) / 0.5));
+    }
+
+    50% {
+      filter: drop-shadow(0 0 8px hsl(var(--primary) / 0.8));
+    }
   }
 }

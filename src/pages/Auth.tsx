@@ -20,7 +20,7 @@ const Auth = ({ onAuthSuccess }: AuthProps) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     // Simulate API call
     setTimeout(() => {
       setIsLoading(false);
@@ -36,18 +36,18 @@ const Auth = ({ onAuthSuccess }: AuthProps) => {
   return (
     <div className="min-h-screen relative flex items-center justify-center p-4">
       {/* Hero background image */}
-      <div 
+      <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20"
         style={{ backgroundImage: `url(${authBg})` }}
       />
-      
+
       {/* Gradient overlay */}
       <div className="absolute inset-0 gradient-bg opacity-90" />
-      
+
       {/* Floating background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl animate-float"></div>
-        <div className="absolute bottom-20 right-10 w-48 h-48 bg-accent/10 rounded-full blur-3xl animate-float" style={{animationDelay: '1s'}}></div>
+        <div className="absolute bottom-20 right-10 w-48 h-48 bg-accent/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }}></div>
         <div className="absolute top-1/2 left-1/3 w-24 h-24 bg-secondary/20 rounded-full blur-2xl animate-pulse-soft"></div>
       </div>
 
@@ -69,13 +69,13 @@ const Auth = ({ onAuthSuccess }: AuthProps) => {
         <Card className="journal-card animate-scale-in border-0">
           <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6 bg-muted/50 p-1 rounded-xl">
-              <TabsTrigger 
-                value="login" 
+              <TabsTrigger
+                value="login"
                 className="rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-soft transition-smooth"
               >
                 Sign In
               </TabsTrigger>
-              <TabsTrigger 
+              <TabsTrigger
                 value="register"
                 className="rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-soft transition-smooth"
               >
@@ -90,7 +90,7 @@ const Auth = ({ onAuthSuccess }: AuthProps) => {
                   Continue your journaling journey
                 </CardDescription>
               </CardHeader>
-              
+
               <form onSubmit={handleSubmit}>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
@@ -103,7 +103,7 @@ const Auth = ({ onAuthSuccess }: AuthProps) => {
                       required
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="password" className="text-sm font-medium">Password</Label>
                     <div className="relative">
@@ -128,10 +128,10 @@ const Auth = ({ onAuthSuccess }: AuthProps) => {
                 </CardContent>
 
                 <CardFooter className="flex flex-col space-y-4 pt-6">
-                  <Button 
-                    type="submit" 
-                    variant="gradient" 
-                    size="lg" 
+                  <Button
+                    type="submit"
+                    variant="gradient"
+                    size="lg"
                     className="w-full"
                     disabled={isLoading}
                   >
@@ -147,7 +147,7 @@ const Auth = ({ onAuthSuccess }: AuthProps) => {
                       </>
                     )}
                   </Button>
-                  
+
                   <p className="text-xs text-muted-foreground text-center">
                     Forgot your password? <span className="text-primary hover:underline cursor-pointer">Reset it here</span>
                   </p>
@@ -157,12 +157,12 @@ const Auth = ({ onAuthSuccess }: AuthProps) => {
 
             <TabsContent value="register" className="space-y-0">
               <CardHeader className="space-y-2 pb-6">
-                <CardTitle className="text-2xl font-playfair text-center">Join Journal+</CardTitle>
+                <CardTitle className="text-2xl font-playfair text-center">Join MoodScape</CardTitle>
                 <CardDescription className="text-center">
                   Start your personal growth journey today
                 </CardDescription>
               </CardHeader>
-              
+
               <form onSubmit={handleSubmit}>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
@@ -175,7 +175,7 @@ const Auth = ({ onAuthSuccess }: AuthProps) => {
                       required
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="reg-email" className="text-sm font-medium">Email</Label>
                     <Input
@@ -186,7 +186,7 @@ const Auth = ({ onAuthSuccess }: AuthProps) => {
                       required
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="reg-password" className="text-sm font-medium">Password</Label>
                     <div className="relative">
@@ -211,10 +211,10 @@ const Auth = ({ onAuthSuccess }: AuthProps) => {
                 </CardContent>
 
                 <CardFooter className="flex flex-col space-y-4 pt-6">
-                  <Button 
-                    type="submit" 
-                    variant="gradient" 
-                    size="lg" 
+                  <Button
+                    type="submit"
+                    variant="gradient"
+                    size="lg"
                     className="w-full"
                     disabled={isLoading}
                   >
@@ -230,7 +230,7 @@ const Auth = ({ onAuthSuccess }: AuthProps) => {
                       </>
                     )}
                   </Button>
-                  
+
                   <p className="text-xs text-muted-foreground text-center">
                     By signing up, you agree to our{" "}
                     <span className="text-primary hover:underline cursor-pointer">Terms of Service</span>
@@ -243,7 +243,7 @@ const Auth = ({ onAuthSuccess }: AuthProps) => {
           </Tabs>
         </Card>
 
-        <div className="text-center mt-8 animate-slide-up" style={{animationDelay: '0.2s'}}>
+        <div className="text-center mt-8 animate-slide-up" style={{ animationDelay: '0.2s' }}>
           <p className="text-sm text-muted-foreground">
             Join thousands of people on their growth journey
           </p>

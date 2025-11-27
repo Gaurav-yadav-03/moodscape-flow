@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Eye, EyeOff, Loader2, BookOpen } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Sparkles } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 export function AuthForm() {
@@ -27,7 +27,7 @@ export function AuthForm() {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
+
     await signIn(formData.email, formData.password);
     setLoading(false);
   };
@@ -35,45 +35,45 @@ export function AuthForm() {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
+
     await signUp(formData.email, formData.password, formData.displayName);
     setLoading(false);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center gradient-bg p-4">
-      <div className="w-full max-w-md space-y-6">
+    <div className="light min-h-screen flex items-center justify-center bg-gradient-to-br from-[#F9F7F4] via-[#E8F4F2] to-[#F3EFF9] p-4">
+      <div className="w-full max-w-md space-y-8">
         {/* Logo and Brand */}
-        <div className="text-center space-y-2">
-          <div className="mx-auto w-16 h-16 bg-gradient-warm rounded-2xl flex items-center justify-center animate-float">
-            <BookOpen className="h-8 w-8 text-white" />
+        <div className="text-center space-y-3">
+          <div className="mx-auto w-20 h-20 bg-gradient-to-br from-[#69A297] to-[#4A8A7D] rounded-3xl flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+            <Sparkles className="h-10 w-10 text-white" />
           </div>
-          <h1 className="text-3xl font-bold bg-gradient-warm bg-clip-text text-transparent">
-            Journal+
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-[#69A297] via-[#4A8A7D] to-[#69A297] bg-clip-text text-transparent">
+            MoodScape
           </h1>
-          <p className="text-muted-foreground">
-            Your personal space for thoughts and memories
+          <p className="text-gray-600 text-lg">
+            Your personal sanctuary for thoughts and reflections
           </p>
         </div>
 
-        <Card className="journal-card">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center">Welcome</CardTitle>
-            <CardDescription className="text-center">
-              Sign in to your account or create a new one
+        <Card className="backdrop-blur-sm bg-white/90 border-[#69A297]/10 shadow-xl rounded-2xl">
+          <CardHeader className="space-y-2 pb-6">
+            <CardTitle className="text-2xl text-center font-semibold text-gray-800">Welcome Back</CardTitle>
+            <CardDescription className="text-center text-base text-gray-600">
+              Continue your journey of self-discovery
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="signin" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="signin" className="transition-smooth">Sign In</TabsTrigger>
-                <TabsTrigger value="signup" className="transition-smooth">Sign Up</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 mb-6 bg-gray-100 p-1 rounded-xl">
+                <TabsTrigger value="signin" className="rounded-lg data-[state=active]:bg-[#69A297] data-[state=active]:text-white transition-all duration-200">Sign In</TabsTrigger>
+                <TabsTrigger value="signup" className="rounded-lg data-[state=active]:bg-[#69A297] data-[state=active]:text-white transition-all duration-200">Sign Up</TabsTrigger>
               </TabsList>
 
               <TabsContent value="signin" className="space-y-4">
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signin-email">Email</Label>
+                    <Label htmlFor="signin-email" className="text-gray-700">Email</Label>
                     <Input
                       id="signin-email"
                       name="email"
@@ -82,12 +82,12 @@ export function AuthForm() {
                       value={formData.email}
                       onChange={handleInputChange}
                       required
-                      className="transition-smooth"
+                      className="bg-white border-gray-200 focus:border-[#69A297] focus:ring-[#69A297]"
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
-                    <Label htmlFor="signin-password">Password</Label>
+                    <Label htmlFor="signin-password" className="text-gray-700">Password</Label>
                     <div className="relative">
                       <Input
                         id="signin-password"
@@ -97,7 +97,7 @@ export function AuthForm() {
                         value={formData.password}
                         onChange={handleInputChange}
                         required
-                        className="pr-10 transition-smooth"
+                        className="pr-10 bg-white border-gray-200 focus:border-[#69A297] focus:ring-[#69A297]"
                       />
                       <Button
                         type="button"
@@ -107,17 +107,17 @@ export function AuthForm() {
                         onClick={() => setShowPassword(!showPassword)}
                       >
                         {showPassword ? (
-                          <EyeOff className="h-4 w-4 text-muted-foreground" />
+                          <EyeOff className="h-4 w-4 text-gray-500" />
                         ) : (
-                          <Eye className="h-4 w-4 text-muted-foreground" />
+                          <Eye className="h-4 w-4 text-gray-500" />
                         )}
                       </Button>
                     </div>
                   </div>
 
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-gradient-warm border-0 hover:opacity-90 transition-smooth"
+                  <Button
+                    type="submit"
+                    className="w-full bg-[#69A297] hover:bg-[#4A8A7D] text-white shadow-md hover:shadow-lg transition-all duration-200 rounded-xl h-11"
                     disabled={loading}
                   >
                     {loading ? (
@@ -135,7 +135,7 @@ export function AuthForm() {
               <TabsContent value="signup" className="space-y-4">
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signup-name">Display Name</Label>
+                    <Label htmlFor="signup-name" className="text-gray-700">Display Name</Label>
                     <Input
                       id="signup-name"
                       name="displayName"
@@ -143,12 +143,12 @@ export function AuthForm() {
                       placeholder="Your name"
                       value={formData.displayName}
                       onChange={handleInputChange}
-                      className="transition-smooth"
+                      className="bg-white border-gray-200 focus:border-[#69A297] focus:ring-[#69A297]"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
+                    <Label htmlFor="signup-email" className="text-gray-700">Email</Label>
                     <Input
                       id="signup-email"
                       name="email"
@@ -157,12 +157,12 @@ export function AuthForm() {
                       value={formData.email}
                       onChange={handleInputChange}
                       required
-                      className="transition-smooth"
+                      className="bg-white border-gray-200 focus:border-[#69A297] focus:ring-[#69A297]"
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
+                    <Label htmlFor="signup-password" className="text-gray-700">Password</Label>
                     <div className="relative">
                       <Input
                         id="signup-password"
@@ -172,7 +172,7 @@ export function AuthForm() {
                         value={formData.password}
                         onChange={handleInputChange}
                         required
-                        className="pr-10 transition-smooth"
+                        className="pr-10 bg-white border-gray-200 focus:border-[#69A297] focus:ring-[#69A297]"
                       />
                       <Button
                         type="button"
@@ -182,17 +182,17 @@ export function AuthForm() {
                         onClick={() => setShowPassword(!showPassword)}
                       >
                         {showPassword ? (
-                          <EyeOff className="h-4 w-4 text-muted-foreground" />
+                          <EyeOff className="h-4 w-4 text-gray-500" />
                         ) : (
-                          <Eye className="h-4 w-4 text-muted-foreground" />
+                          <Eye className="h-4 w-4 text-gray-500" />
                         )}
                       </Button>
                     </div>
                   </div>
 
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-gradient-warm border-0 hover:opacity-90 transition-smooth"
+                  <Button
+                    type="submit"
+                    className="w-full bg-[#69A297] hover:bg-[#4A8A7D] text-white shadow-md hover:shadow-lg transition-all duration-200 rounded-xl h-11"
                     disabled={loading}
                   >
                     {loading ? (
@@ -210,8 +210,8 @@ export function AuthForm() {
           </CardContent>
         </Card>
 
-        <p className="text-center text-sm text-muted-foreground">
-          Your thoughts, your space, your story.
+        <p className="text-center text-sm text-gray-500">
+          ✨ Your thoughts, your sanctuary, your journey ✨
         </p>
       </div>
     </div>

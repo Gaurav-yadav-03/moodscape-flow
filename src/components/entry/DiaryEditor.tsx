@@ -1,553 +1,180 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Save, 
-  ArrowLeft, 
-  Palette, 
-  Type, 
-  Smile,
-  Calendar,
+import {
+  ArrowLeft,
+  Calendar as CalendarIcon,
   Sparkles,
-  Brain,
-  Heart,
-  Wand2,
-  Trash2,
-  Edit3,
-  AlertTriangle
+  StickyNote,
+  PanelLeftClose,
+  PanelRightClose,
 } from 'lucide-react';
-import { 
-  Entry, 
-  MOOD_OPTIONS, 
-  THEME_OPTIONS, 
-  FONT_OPTIONS,
-  MoodOption,
-  ThemeOption,
-  FontOption,
-  getTodaysDate
-} from '@/types/journal';
+import { format } from 'date-fns';
 import { useEntries } from '@/hooks/useEntries';
-import { useUserSettings } from '@/hooks/useUserSettings';
-import { useAI } from '@/hooks/useAI';
-import { useToast } from '@/hooks/use-toast';
-import { ThemeSelector } from '@/components/ui/theme-selector';
-import { StickyNotes } from './StickyNotes';
-import { EmojiPicker } from './EmojiPicker';
-import { DateSelector } from './DateSelector';
-import { AutosaveIndicator } from './AutosaveIndicator';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { WritingStats } from './WritingStats';
+import { FloatingToolbar } from './FloatingToolbar';
+import { AutoSaveIndicator } from './AutoSaveIndicator';
+import { AIPanel } from './AIPanel';
+import { QuickNotesPanel } from './QuickNotesPanel';
+import { SettingsDropdown } from './SettingsDropdown';
 
 interface DiaryEditorProps {
   entryId?: string;
-  selectedDate?: string;
   onBack: () => void;
 }
 
-export function DiaryEditor({ entryId, selectedDate, onBack }: DiaryEditorProps) {
-  const [entry, setEntry] = useState<Partial<Entry>>({
-    title: '',
-    content: '',
-    mood: 'neutral',
-    theme: 'default',
-    font_style: 'default',
-    entry_theme: 'default',
-    entry_font: 'default',
-    date: selectedDate || getTodaysDate()
-  });
-  const [saving, setSaving] = useState(false);
-  const [autosaveStatus, setAutosaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [aiSummary, setAiSummary] = useState<string>('');
-  const [aiReflection, setAiReflection] = useState<string>('');
-  const [customTheme, setCustomTheme] = useState<string>('default');
-  const [stickyNotes, setStickyNotes] = useState<any[]>([]);
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const [currentDate, setCurrentDate] = useState(selectedDate || getTodaysDate());
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  const { entries, createEntry, updateEntry, deleteEntry, getEntryByDate } = useEntries();
-  const { settings, updateSettings } = useUserSettings();
-  const { summarizeEntry, detectMood, getReflection, loading: aiLoading } = useAI();
-  const { toast } = useToast();
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
-  // Load existing entry if editing or by date
+export function DiaryEditor({ entryId, onBack }: DiaryEditorProps) {
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [mood, setMood] = useState('neutral');
+  const [date, setDate] = useState<Date>(new Date());
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [showToolbar, setShowToolbar] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date>();
+  const [showAIPanel, setShowAIPanel] = useState(true);
+  const [showNotesPanel, setShowNotesPanel] = useState(true);
+  const [fontFamily, setFontFamily] = useState('serif');
+  const [theme, setTheme] = useState('light');
+  const [backgroundImage, setBackgroundImage] = useState('');
+  const [backgroundOpacity, setBackgroundOpacity] = useState(0.5);
+
+  const { createEntry, updateEntry, getEntryById, loading: entriesLoading } = useEntries();
+
   useEffect(() => {
-    const loadEntry = async () => {
-      if (entryId) {
-        const existingEntry = entries.find(e => e.id === entryId);
-        if (existingEntry) {
-          setEntry(existingEntry);
-          setCurrentDate(existingEntry.date);
-          setCustomTheme(existingEntry.entry_theme || existingEntry.theme || 'default');
-          // Load sticky notes
-          try {
-            const notes = existingEntry.stickyNotes ? JSON.parse(existingEntry.stickyNotes) : [];
-            setStickyNotes(Array.isArray(notes) ? notes : []);
-          } catch {
-            setStickyNotes([]);
-          }
-        }
-      } else if (currentDate) {
-        const { data: dateEntry } = await getEntryByDate(currentDate);
-        if (dateEntry) {
-          setEntry(dateEntry);
-          setCustomTheme(dateEntry.entry_theme || dateEntry.theme || 'default');
-          // Load sticky notes
-          try {
-            const notes = dateEntry.stickyNotes ? JSON.parse(dateEntry.stickyNotes) : [];
-            setStickyNotes(Array.isArray(notes) ? notes : []);
-          } catch {
-            setStickyNotes([]);
-          }
-        } else {
-          // Apply user's default theme for new entries
-          setEntry(prev => ({
-            ...prev,
-            theme: settings?.default_theme || 'default',
-            font_style: settings?.default_font || 'default',
-            entry_theme: settings?.default_theme || 'default',
-            entry_font: settings?.default_font || 'default',
-            date: currentDate
-          }));
-          setCustomTheme(settings?.default_theme || 'default');
-          setStickyNotes([]);
-        }
-      }
-    };
-    
-    loadEntry();
-  }, [entryId, currentDate, entries, getEntryByDate, settings]);
+    if (entryId) {
+      loadEntry(entryId);
+    }
+  }, [entryId]);
 
-  // Improved autosave with proper debouncing
   useEffect(() => {
-    // Clear existing timeout
-    if (autosaveTimeoutRef.current) {
-      clearTimeout(autosaveTimeoutRef.current);
+    if (!content && !title) return;
+    const timer = setTimeout(() => {
+      handleAutoSave();
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [content, title, mood]);
+
+  const loadEntry = async (id: string) => {
+    const { data, error } = await getEntryById(id);
+    if (data && !error) {
+      setTitle(data.title);
+      setContent(data.content);
+      setMood(data.mood || 'neutral');
+      const [year, month, day] = data.date.split('-').map(Number);
+      setDate(new Date(year, month - 1, day));
     }
+  };
 
-    // Only autosave if we have an existing entry and content
-    if (!entryId || !entry.content?.trim()) return;
-
-    // Set new timeout for autosave
-    autosaveTimeoutRef.current = setTimeout(async () => {
-      setAutosaveStatus('saving');
-      try {
-        await updateEntry(entryId, entry);
-        setAutosaveStatus('saved');
-        setLastSaved(new Date());
-        setTimeout(() => setAutosaveStatus('idle'), 2000);
-      } catch (error) {
-        setAutosaveStatus('error');
-        setTimeout(() => setAutosaveStatus('idle'), 3000);
-      }
-    }, 1500); // Debounce for 1.5 seconds
-
-    // Cleanup function
-    return () => {
-      if (autosaveTimeoutRef.current) {
-        clearTimeout(autosaveTimeoutRef.current);
-      }
-    };
-  }, [entry.content, entry.title, entry.mood, entryId, updateEntry]);
-
-  const handleSave = async () => {
-    if (!entry.content?.trim() && !entry.title?.trim()) {
-      toast({
-        title: "Nothing to save",
-        description: "Please write something before saving",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setSaving(true);
+  const handleAutoSave = async () => {
+    if (!content.trim() && !title.trim()) return;
+    setSaveStatus('saving');
     try {
-      const entryData = {
-        title: entry.title || '',
-        content: entry.content || '',
-        mood: entry.mood,
-        theme: entry.theme,
-        font_style: entry.font_style,
-        date: currentDate
-      };
-
-      let result;
+      const entryData = { title, content, mood, date: format(date, 'yyyy-MM-dd') };
       if (entryId) {
-        result = await updateEntry(entryId, entryData);
-        if (!result.error) {
-          setLastSaved(new Date());
-          toast({ title: "Entry updated", description: "Changes saved successfully" });
-        }
+        await updateEntry(entryId, entryData);
       } else {
-        result = await createEntry(entryData, currentDate);
-        
-        if (result.error && result.existingId) {
-          const confirmOverwrite = window.confirm(
-            'An entry already exists for this date. Do you want to edit the existing entry instead?'
-          );
-          if (confirmOverwrite) {
-            onBack();
-            return;
-          }
-        }
-        
-        if (result.data) {
-          setLastSaved(new Date());
-          toast({ title: "Entry saved", description: "Your diary entry has been saved" });
+        const { data } = await createEntry(entryData);
+        if (data) {
+          window.history.replaceState({}, '', `/entry/${data.id}`);
         }
       }
-
-      if (result.error) {
-        throw new Error(result.error);
-      }
-
-      // Update user theme settings if changed
-      if (settings && updateSettings && entry.theme !== settings.default_theme) {
-        await updateSettings({ default_theme: entry.theme });
-      }
-
-      setTimeout(() => onBack(), 1000);
-
+      setSaveStatus('saved');
+      setLastSaved(new Date());
     } catch (error) {
-      console.error('Error saving entry:', error);
-      toast({
-        title: "Failed to save",
-        description: "Could not save your entry",
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(false);
+      setSaveStatus('error');
     }
   };
 
-  const handleDelete = async () => {
-    if (!entryId) return;
-    
-    try {
-      setSaving(true);
-      const { error } = await deleteEntry(entryId);
-      
-      if (error) {
-        toast({
-          title: "Failed to delete",
-          description: "Could not delete the entry",
-          variant: "destructive",
-        });
-        return;
-      }
+  const handleFormat = (format: string) => {
+    console.log('Format:', format);
+  };
 
-      toast({
-        title: "Entry deleted",
-        description: "Your diary entry has been deleted",
-      });
-      
-      setShowDeleteConfirm(false);
-      onBack();
-    } catch (error) {
-      console.error('Delete error:', error);
-      toast({
-        title: "Delete failed",
-        description: "An error occurred while deleting",
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(false);
+  const getFontClass = () => {
+    switch (fontFamily) {
+      case 'serif': return 'font-serif';
+      case 'sans': return 'font-sans';
+      case 'mono': return 'font-mono';
+      default: return 'font-serif';
     }
   };
 
-  const handleDateChange = (date: string) => {
-    // Ensure proper date format and UTC handling
-    const utcDate = new Date(date + 'T00:00:00.000Z').toISOString().split('T')[0];
-    setCurrentDate(utcDate);
-    setEntry(prev => ({ ...prev, date: utcDate }));
-  };
-
-  const handleAIMoodDetection = async () => {
-    if (!entry.content?.trim()) return;
-    const detectedMood = await detectMood(entry.content);
-    if (detectedMood && MOOD_OPTIONS.find(m => m.value === detectedMood)) {
-      setEntry(prev => ({ ...prev, mood: detectedMood }));
-      toast({ title: "Mood detected!", description: `AI detected your mood as ${detectedMood}` });
-    }
-  };
-
-  const selectedMood = MOOD_OPTIONS.find(m => m.value === entry.mood) || MOOD_OPTIONS[5];
-  const selectedTheme = THEME_OPTIONS.find(t => t.value === entry.theme) || THEME_OPTIONS[0];
-  const selectedFont = FONT_OPTIONS.find(f => f.value === entry.font_style) || FONT_OPTIONS[0];
-  const wordCount = entry.content?.split(/\s+/).filter(word => word.length > 0).length || 0;
-
-  const handleEmojiInsert = useCallback((emoji: string) => {
-    if (textareaRef.current) {
-      const textarea = textareaRef.current;
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const currentContent = entry.content || '';
-      const newContent = currentContent.slice(0, start) + emoji + currentContent.slice(end);
-      setEntry(prev => ({ ...prev, content: newContent }));
-      
-      // Restore cursor position after emoji
-      setTimeout(() => {
-        textarea.focus();
-        textarea.setSelectionRange(start + emoji.length, start + emoji.length);
-      }, 0);
-    }
-  }, [entry.content]);
-
-  const handleThemeChange = (theme: string) => {
-    setCustomTheme(theme);
-    setEntry(prev => ({ 
-      ...prev, 
-      entry_theme: theme,
-      theme: theme
-    }));
-    // Save theme preference immediately
-    if (settings && updateSettings) {
-      updateSettings({ default_theme: theme });
-    }
-  };
-
-  const handleFontChange = (font: string) => {
-    setEntry(prev => ({ 
-      ...prev, 
-      entry_font: font,
-      font_style: font
-    }));
-  };
-
-  const getBackgroundStyle = () => {
-    if (customTheme === 'custom' && entry.customBackground) {
-      return {
-        backgroundImage: `url(${entry.customBackground})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundAttachment: 'fixed'
-      };
-    }
-    
-    const themeStyles = {
-      default: 'gradient-bg',
-      pastel: 'bg-gradient-to-br from-pink-100 via-purple-50 to-indigo-100 dark:from-pink-900/20 dark:via-purple-900/20 dark:to-indigo-900/20',
-      forest: 'bg-gradient-to-br from-green-100 via-emerald-50 to-teal-100 dark:from-green-900/20 dark:via-emerald-900/20 dark:to-teal-900/20',
-      sunset: 'bg-gradient-to-br from-orange-100 via-red-50 to-pink-100 dark:from-orange-900/20 dark:via-red-900/20 dark:to-pink-900/20',
-      minimal: 'bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-900 dark:to-black'
-    };
-    
-    return { className: themeStyles[customTheme as keyof typeof themeStyles] || themeStyles.default };
-  };
-
-  const backgroundStyle = getBackgroundStyle();
+  if (entriesLoading && entryId) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-white via-primary/5 to-primary/10">
+        <div className="animate-pulse text-sm font-medium text-gray-400">Loading...</div>
+      </div>
+    );
+  }
 
   return (
-    <div 
-      className={`min-h-screen ${backgroundStyle.className || ''}`}
-      style={backgroundStyle.backgroundImage ? backgroundStyle : undefined}
-    >
-      {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Button variant="ghost" onClick={onBack}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
-              </Button>
-              <DateSelector 
-                selectedDate={currentDate}
-                onDateChange={handleDateChange}
-              />
-            </div>
-            <div className="flex items-center space-x-4">
-              <AutosaveIndicator status={autosaveStatus} lastSaved={lastSaved} />
-              
-              {entryId && (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="outline" 
-                      size="sm"
-                      className="hover:bg-destructive hover:text-destructive-foreground"
-                    >
-                      <Trash2 className="h-4 w-4" />
+    <div className="min-h-screen bg-gradient-to-br from-white via-primary/5 to-primary/10 relative">
+      {backgroundImage && (
+        <>
+          <div className="fixed inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${backgroundImage})`, zIndex: 0 }} />
+          <div className="fixed inset-0 bg-white z-[1]" style={{ opacity: Math.max(0.3, 1 - backgroundOpacity) }} />
+        </>
+      )}
+      <div className="relative z-10 flex h-screen">
+        <div className={cn("transition-all duration-300", showNotesPanel ? "w-72" : "w-0 overflow-hidden")}>
+          {showNotesPanel && <QuickNotesPanel />}
+        </div>
+        <div className="flex-1 flex flex-col">
+          <header className="border-b border-primary/10 bg-white/80 backdrop-blur-md shadow-sm">
+            <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Button variant="ghost" onClick={onBack} className="h-8 w-8 p-0 text-gray-600 hover:text-primary hover:bg-primary/10">
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <div className="h-4 w-px bg-gray-200" />
+                <Button variant="ghost" size="sm" onClick={() => setShowNotesPanel(!showNotesPanel)} className={cn("h-8 w-8 p-0", showNotesPanel ? "text-primary bg-primary/10" : "text-gray-500 hover:text-primary hover:bg-primary/5")}>
+                  {showNotesPanel ? <PanelLeftClose className="h-4 w-4" /> : <StickyNote className="h-4 w-4" />}
+                </Button>
+                <Popover open={showCalendar} onOpenChange={setShowCalendar}>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" className="h-8 px-2 text-sm font-medium text-gray-600 hover:text-primary hover:bg-primary/5">
+                      {format(date, 'MMMM d, yyyy')}
                     </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle className="flex items-center space-x-2">
-                        <AlertTriangle className="h-5 w-5 text-destructive" />
-                        <span>Delete Entry</span>
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Are you sure you want to delete this diary entry? This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction 
-                        onClick={handleDelete}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      >
-                        Delete Entry
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              )}
-              
-              <Button 
-                onClick={handleSave}
-                disabled={saving || !entry.content?.trim()}
-                className="bg-gradient-warm border-0 hover:opacity-90"
-              >
-                <Save className="h-4 w-4 mr-2" />
-                {entryId ? 'Update' : 'Save'} Entry
-              </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={date} onSelect={(d) => { if (d) { setDate(d); setShowCalendar(false); } }} />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="flex items-center gap-4">
+                <AutoSaveIndicator status={saveStatus} lastSaved={lastSaved} />
+                <SettingsDropdown fontFamily={fontFamily} onFontChange={setFontFamily} theme={theme} onThemeChange={setTheme} backgroundImage={backgroundImage} onBackgroundChange={setBackgroundImage} backgroundOpacity={backgroundOpacity} onOpacityChange={setBackgroundOpacity} />
+                <Button variant="ghost" size="sm" onClick={() => setShowAIPanel(!showAIPanel)} className={cn("h-8 w-8 p-0", showAIPanel ? "text-primary bg-primary/10" : "text-gray-500 hover:text-primary hover:bg-primary/5")}>
+                  {showAIPanel ? <PanelRightClose className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+                </Button>
+              </div>
             </div>
+          </header>
+          <FloatingToolbar onFormat={handleFormat} visible={showToolbar} />
+          <main className="flex-1 overflow-y-auto">
+            <div className={cn("max-w-[700px] mx-auto px-8 pt-16 pb-32", getFontClass())}>
+              <div className="space-y-6">
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} onFocus={() => setShowToolbar(true)} onBlur={() => setTimeout(() => setShowToolbar(false), 200)} placeholder="Entry Title" className="text-4xl font-bold border-none bg-white/90 backdrop-blur-sm px-4 py-3 rounded-lg shadow-sm focus-visible:ring-2 focus-visible:ring-primary/20 placeholder:text-gray-400" />
+                <Textarea value={content} onChange={(e) => setContent(e.target.value)} onFocus={() => setShowToolbar(true)} onBlur={() => setTimeout(() => setShowToolbar(false), 200)} placeholder="Start writing..." className="min-h-[60vh] resize-none border-none bg-white/90 backdrop-blur-sm px-4 py-3 rounded-lg shadow-sm focus-visible:ring-2 focus-visible:ring-primary/20 text-lg leading-relaxed placeholder:text-gray-400" />
+              </div>
+            </div>
+          </main>
+          <div className="fixed bottom-4 right-6">
+            <WritingStats content={content} />
           </div>
         </div>
-      </header>
-
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Main Editor */}
-          <div className="lg:col-span-3">
-            <Card className="journal-card">
-              <CardHeader>
-                <Input
-                  placeholder="Give your entry a title (optional)"
-                  value={entry.title || ''}
-                  onChange={(e) => setEntry(prev => ({ ...prev, title: e.target.value }))}
-                  className="text-lg font-medium border-none bg-transparent p-0 focus-visible:ring-0"
-                />
-                <div className="flex items-center justify-between">
-                  <Badge className={`${selectedMood.color} text-white`}>
-                    <span className="mr-1">{selectedMood.emoji}</span>
-                    {selectedMood.label}
-                  </Badge>
-                  <div className="flex space-x-2">
-                    <Button variant="outline" size="sm" onClick={handleAIMoodDetection} disabled={aiLoading}>
-                      <Brain className="h-3 w-3 mr-1" />
-                      AI Mood
-                    </Button>
-                    <EmojiPicker onEmojiSelect={handleEmojiInsert} />
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className={`p-6 rounded-lg theme-${entry.theme || 'clean'}`}>
-                  <Textarea
-                    placeholder="What's on your mind today?"
-                    value={entry.content || ''}
-                    onChange={(e) => setEntry(prev => ({ ...prev, content: e.target.value }))}
-                    ref={textareaRef}
-                    className={cn(
-                      "min-h-[400px] resize-none border-0 shadow-none text-base leading-relaxed focus-visible:ring-1 focus-visible:ring-primary",
-                      FONT_OPTIONS.find(f => f.value === entry.entry_font)?.className || selectedFont.className
-                    )}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Mood Selector */}
-            <Card className="journal-card">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Smile className="h-5 w-5" />
-                  <span>Mood</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-2">
-                  {MOOD_OPTIONS.map((mood: MoodOption) => (
-                    <Button
-                      key={mood.value}
-                      variant={entry.mood === mood.value ? "default" : "outline"}
-                      className={cn(
-                        "justify-start h-auto p-3",
-                        entry.mood === mood.value && `${mood.color} text-white`
-                      )}
-                      onClick={() => setEntry(prev => ({ ...prev, mood: mood.value }))}
-                    >
-                      <span className="mr-2">{mood.emoji}</span>
-                      <span className="text-sm">{mood.label}</span>
-                    </Button>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* AI Features */}
-            <Card className="journal-card">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Sparkles className="h-5 w-5" />
-                  <span>AI Features</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button
-                  variant="outline"
-                  onClick={async () => {
-                    const summary = await summarizeEntry(entry.content || '');
-                    if (summary) setAiSummary(summary);
-                  }}
-                  disabled={aiLoading || !entry.content?.trim()}
-                  className="w-full"
-                  size="sm"
-                >
-                  <Wand2 className="h-3 w-3 mr-2" />
-                  Summarize
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={async () => {
-                    const reflection = await getReflection(entry.content || '');
-                    if (reflection) setAiReflection(reflection);
-                  }}
-                  disabled={aiLoading || !entry.content?.trim()}
-                  className="w-full"
-                  size="sm"
-                >
-                  <Heart className="h-3 w-3 mr-2" />
-                  Reflect
-                </Button>
-                
-                {/* Display AI Results */}
-                {aiSummary && (
-                  <div className="p-3 bg-primary/5 rounded-lg border">
-                    <h4 className="font-medium text-sm mb-2">AI Summary:</h4>
-                    <p className="text-sm text-muted-foreground">{aiSummary}</p>
-                  </div>
-                )}
-                {aiReflection && (
-                  <div className="p-3 bg-secondary/5 rounded-lg border">
-                    <h4 className="font-medium text-sm mb-2">AI Reflection:</h4>
-                    <p className="text-sm text-muted-foreground">{aiReflection}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Theme Selector */}
-            <ThemeSelector 
-              currentTheme={customTheme}
-              onThemeChange={handleThemeChange}
-            />
-
-            {/* Sticky Notes */}
-            <StickyNotes 
-              notes={stickyNotes}
-              onNotesChange={setStickyNotes}
-            />
-          </div>
+        <div className={cn("transition-all duration-300", showAIPanel ? "w-80" : "w-0 overflow-hidden")}>
+          {showAIPanel && <AIPanel content={content} onMoodDetected={(m) => setMood(m)} />}
         </div>
       </div>
     </div>
