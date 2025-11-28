@@ -3,10 +3,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { AuthForm } from "@/components/auth/AuthForm";
 import { Dashboard } from "@/components/dashboard/Dashboard";
 import { DiaryEditor } from "@/components/entry/DiaryEditor";
+import { Landing } from "./Landing";
 
 const Index = () => {
   const [currentPage, setCurrentPage] = useState<"dashboard" | "diary">("dashboard");
   const [editingEntryId, setEditingEntryId] = useState<string | undefined>();
+  const [showAuth, setShowAuth] = useState(false);
   const { user, loading } = useAuth();
 
   const navigateTo = (page: "dashboard" | "diary", entryId?: string) => {
@@ -35,7 +37,10 @@ const Index = () => {
   }
 
   if (!user) {
-    return <AuthForm />;
+    if (showAuth) {
+      return <AuthForm onBack={() => setShowAuth(false)} />;
+    }
+    return <Landing onGetStarted={() => setShowAuth(true)} />;
   }
 
   if (currentPage === "diary") {
