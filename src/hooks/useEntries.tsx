@@ -38,11 +38,29 @@ export function useEntries() {
     }
   };
 
+  const getEntryById = async (id: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('entries')
+        .select('*')
+        .eq('id', id)
+        .eq('user_id', user?.id!)
+        .maybeSingle();
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error fetching entry by id:', error);
+      return { data: null, error };
+    }
+  };
+
   const createEntry = async (entryData: Omit<Entry, 'id' | 'user_id' | 'created_at' | 'updated_at'>, date?: string) => {
     try {
-      // Fix timezone offset - get local date properly
+      // Use local date string to avoid UTC timezone shifting the date
       const now = new Date();
-      const targetDate = date || new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+      const localDateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const targetDate = date || localDateStr;
       
       // Check if an entry already exists for the target date
       const { data: existingEntry } = await supabase
@@ -95,7 +113,7 @@ export function useEntries() {
 
   const getTodaysEntry = async () => {
     const now = new Date();
-    const todaysDate = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+    const todaysDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     return getEntryByDate(todaysDate);
   };
 
@@ -177,10 +195,11 @@ export function useEntries() {
     loading,
     fetchEntries,
     createEntry,
-      updateEntry,
-      deleteEntry,
-      searchEntries,
-      getTodaysEntry,
-      getEntryByDate,
+    updateEntry,
+    deleteEntry,
+    searchEntries,
+    getTodaysEntry,
+    getEntryByDate,
+    getEntryById,
   };
 }

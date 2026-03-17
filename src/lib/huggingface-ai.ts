@@ -171,62 +171,53 @@ export class HuggingFaceAI {
   }
 
   private generateContextualReflection(text: string): string {
-    const words = text.toLowerCase().split(/\W+/);
-    const wordCount = text.split(' ').length;
+    const trimmed = text.trim();
+    // Extract sentences from the actual diary content
+    const sentences = trimmed.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 5);
+    const words = trimmed.toLowerCase().split(/\W+/);
 
-    // Context-aware reflection templates - Strictly Analytical & Content-Based
-    if (words.some(w => ['work', 'job', 'meeting', 'deadline', 'project', 'career'].includes(w))) {
-      const workReflections = [
-        "The entry centers on professional responsibilities and the specific challenges encountered in the work environment.",
-        "This passage highlights a focus on career-related tasks and the outcomes of recent professional efforts.",
-        "The writing describes a sequence of work-related events and the immediate reactions to professional demands."
-      ];
-      return workReflections[Math.floor(Math.random() * workReflections.length)];
+    // Pull out key phrases directly from the entry to personalize the reflection
+    const firstSentence = sentences[0] || trimmed.slice(0, 80);
+    const lastSentence = sentences[sentences.length - 1] || firstSentence;
+
+    // Detect emotional tone
+    const isPositive = /happy|joy|excited|amazing|wonderful|great|good|got|finally|love|proud|succeed|achiev|hired|job|won|passed/i.test(trimmed);
+    const isNegative = /sad|down|disappoint|hurt|lonely|cry|upset|stress|anxious|worried|overwhelm|hard|difficult|struggle|tired|failed/i.test(trimmed);
+    const isAchievement = /finally|got|hired|promoted|passed|won|achieved|succeeded|offer|milestone|dream/i.test(trimmed);
+    const isReflective = /think|feel|realize|wonder|remind|remember|miss|hope|wish/i.test(trimmed);
+
+    if (isAchievement && isPositive) {
+      return `You wrote about something meaningful: "${firstSentence}". This kind of moment — where effort meets reward — is worth sitting with. What did it take to get here, and who supported you along the way?`;
     }
 
-    if (words.some(w => ['family', 'friend', 'relationship', 'love', 'partner', 'connect'].includes(w))) {
-      const relReflections = [
-        "The text focuses on interpersonal dynamics and specific interactions with close connections.",
-        "This entry details recent social exchanges and the specific nature of current relationships.",
-        "The content describes the state of personal bonds and the events affecting them."
-      ];
-      return relReflections[Math.floor(Math.random() * relReflections.length)];
+    if (isPositive) {
+      return `Your entry captures a genuinely good moment: "${firstSentence}". What made today feel this way, and how can you carry this energy forward?`;
     }
 
-    if (words.some(w => ['stress', 'worried', 'anxious', 'difficult', 'hard', 'struggle'].includes(w))) {
-      const stressReflections = [
-        "The entry describes a situation characterized by high pressure and the specific difficulties being faced.",
-        "The tone indicates a response to challenging circumstances and details the stressors involved.",
-        "The writing outlines current obstacles and the immediate impact of these difficulties."
-      ];
-      return stressReflections[Math.floor(Math.random() * stressReflections.length)];
+    if (isNegative) {
+      return `You wrote: "${firstSentence}". It sounds like today brought some weight. What's one small thing that could shift how you feel, even slightly?`;
     }
 
-    if (words.some(w => ['happy', 'excited', 'amazing', 'wonderful', 'great', 'joy', 'grateful'].includes(w))) {
-      const joyReflections = [
-        "The entry records positive events and the specific favorable outcomes experienced today.",
-        "The text describes a series of successful or enjoyable moments and the resulting satisfaction.",
-        "The content highlights specific achievements or pleasant occurrences and the immediate positive reaction."
-      ];
-      return joyReflections[Math.floor(Math.random() * joyReflections.length)];
+    if (isReflective) {
+      return `You reflected: "${firstSentence}". These thoughts reveal what matters to you. What would you want to remember about this moment a year from now?`;
     }
 
-    if (wordCount > 150) {
-      return "The entry provides a detailed account of recent events, elaborating on specific thoughts and the sequence of occurrences.";
+    if (sentences.length > 1) {
+      return `You captured two threads today — starting with "${firstSentence}" and ending on "${lastSentence}". What's the thread connecting these ideas?`;
     }
 
-    return "The entry records current thoughts and observations regarding recent experiences.";
+    return `You wrote: "${firstSentence}". What prompted this thought today, and what does it say about what you're currently focused on?`;
   }
 
   private fallbackMoodDetection(text: string): MoodDetectionResult {
     const words = text.toLowerCase().split(/\W+/);
 
     const moodKeywords = {
-      excited: ['excited', 'thrilled', 'energetic', 'adventure', 'party', 'celebration', 'joy', 'amazing'],
-      happy: ['happy', 'wonderful', 'great', 'love', 'perfect', 'good', 'pleased'],
-      sad: ['sad', 'down', 'disappointed', 'hurt', 'lonely', 'crying', 'upset'],
-      stressed: ['stress', 'anxious', 'worried', 'overwhelmed', 'pressure', 'busy'],
-      calm: ['calm', 'peaceful', 'relaxed', 'quiet', 'serene', 'meditation']
+      excited: ['excited', 'thrilled', 'energetic', 'adventure', 'party', 'celebration', 'joy', 'amazing', 'finally', 'got', 'achieved', 'succeeded', 'hired', 'promotion', 'promoted', 'passed', 'won', 'milestone'],
+      happy: ['happy', 'wonderful', 'great', 'love', 'perfect', 'good', 'pleased', 'glad', 'job', 'offer', 'accepted', 'blessed', 'lucky', 'proud', 'grateful'],
+      sad: ['sad', 'down', 'disappointed', 'hurt', 'lonely', 'crying', 'upset', 'miss', 'lost', 'failed', 'rejected'],
+      stressed: ['stress', 'anxious', 'worried', 'overwhelmed', 'pressure', 'busy', 'tired', 'exhausted', 'deadline', 'problem'],
+      calm: ['calm', 'peaceful', 'relaxed', 'quiet', 'serene', 'meditation', 'easy', 'fine', 'okay']
     };
 
     const scores: Record<string, number> = {};
